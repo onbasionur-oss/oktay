@@ -15,12 +15,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- TASARIM İMZASI (ORTADA VE BİRAZ AŞAĞIDA) ---
+# --- TASARIM İMZASI (TEKRAR YUKARI ALINDI) ---
 st.markdown("""
     <style>
     .fixed-design-credit {
         position: fixed;
-        top: 40px; /* Bir satır aşağı kaydırıldı (Eski değer: 10px) */
+        top: 12px; /* Tekrar yukarı taşındı */
         left: 50%;
         transform: translateX(-50%);
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
