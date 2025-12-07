@@ -92,7 +92,7 @@ def run_query(query):
 # 2. ÜST PANEL VE ÖZET (KPI)
 # ---------------------------------------------------------
 
-st.title("🏢 Merkez  Genel Durum Raporu")
+st.title("🏢 Merkez   Durum Raporu")
 
 # --- Danimarka Saati ---
 denmark_zone = pytz.timezone('Europe/Copenhagen')
