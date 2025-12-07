@@ -15,31 +15,27 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- TASARIM İMZASI EKLEME (Design by Oktay) ---
+# --- TASARIM İMZASI (GÜÇLENDİRİLMİŞ KOD) ---
 st.markdown("""
     <style>
     .fixed-design-credit {
         position: fixed;
         top: 12px;
-        right: 70px; /* Streamlit menüsünün soluna yerleşmesi için */
-        font-family: 'Brush Script MT', 'Lucida Handwriting', cursive; /* El yazısı stili */
-        font-size: 20px;
-        color: #FF4B4B; /* Dikkat çekici ama şık bir renk */
+        right: 90px; /* Menü butonlarından kaçmak için sola çektik */
+        font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
+        font-size: 22px;
+        background: linear-gradient(45deg, #FF4B4B, #FF914D);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         font-weight: bold;
-        z-index: 99999;
-        pointer-events: none; /* Tıklamaları engellememesi için */
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-    }
-    /* Dark mode kullanılıyorsa rengi açık yap */
-    @media (prefers-color-scheme: dark) {
-        .fixed-design-credit {
-            color: #ffbd45;
-        }
+        z-index: 1000001 !important; /* Diğer tüm katmanların en üstüne çıkması için */
+        pointer-events: none;
+        text-shadow: 0px 0px 1px rgba(0,0,0,0.1);
     }
     </style>
     <div class="fixed-design-credit">Design by Oktay</div>
     """, unsafe_allow_html=True)
-# -----------------------------------------------
+# ---------------------------------------------------------
 
 # Önbellekli Bağlantı Fonksiyonu
 @st.cache_resource
