@@ -15,23 +15,23 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- TASARIM İMZASI (EFEKTLİ & ORTALANMIŞ) ---
+# --- TASARIM İMZASI (SOLA YANAŞIK & EFEKTLİ) ---
 st.markdown("""
     <style>
-    /* Animasyon Tanımı: Hafifçe büyüyüp parlama */
+    /* Animasyon Tanımı: Sadece büyüme ve parlama (Sağa sola kayma yok) */
     @keyframes gentle-pulse-glow {
         0% {
-            transform: translateX(-50%) scale(1);
+            transform: scale(1);
             text-shadow: 0 0 2px rgba(255, 75, 75, 0.3);
             opacity: 0.9;
         }
         50% {
-            transform: translateX(-50%) scale(1.05); /* %5 büyü */
-            text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); /* Parlamayı artır */
+            transform: scale(1.05); /* %5 büyü */
+            text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6);
             opacity: 1;
         }
         100% {
-            transform: translateX(-50%) scale(1);
+            transform: scale(1);
             text-shadow: 0 0 2px rgba(255, 75, 75, 0.3);
             opacity: 0.9;
         }
@@ -39,13 +39,13 @@ st.markdown("""
 
     .fixed-design-credit {
         position: fixed;
-        top: 12px;
-        left: 50%;
-        /* transform: translateX(-50%);  <- Bu satırı animasyonun içine taşıdık */
-        font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
-        font-size: 26px; /* Yazıyı biraz daha büyüttük */
+        top: 12px;    /* Yukarıdan boşluk */
+        left: 20px;   /* Soldan boşluk (Sola hizalama) */
         
-        /* Daha canlı bir gradyan */
+        font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
+        font-size: 26px;
+        
+        /* Renk Gradyanı */
         background: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
         background-size: 200% auto;
         -webkit-background-clip: text;
@@ -56,7 +56,7 @@ st.markdown("""
         pointer-events: none;
         white-space: nowrap;
         
-        /* Animasyonu uygula: 3 saniyede bir tekrar et */
+        /* Animasyonu uygula */
         animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
     </style>
