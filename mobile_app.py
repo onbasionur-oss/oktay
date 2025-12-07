@@ -15,24 +15,49 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- TASARIM İMZASI (TEKRAR YUKARI ALINDI) ---
+# --- TASARIM İMZASI (EFEKTLİ & ORTALANMIŞ) ---
 st.markdown("""
     <style>
+    /* Animasyon Tanımı: Hafifçe büyüyüp parlama */
+    @keyframes gentle-pulse-glow {
+        0% {
+            transform: translateX(-50%) scale(1);
+            text-shadow: 0 0 2px rgba(255, 75, 75, 0.3);
+            opacity: 0.9;
+        }
+        50% {
+            transform: translateX(-50%) scale(1.05); /* %5 büyü */
+            text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); /* Parlamayı artır */
+            opacity: 1;
+        }
+        100% {
+            transform: translateX(-50%) scale(1);
+            text-shadow: 0 0 2px rgba(255, 75, 75, 0.3);
+            opacity: 0.9;
+        }
+    }
+
     .fixed-design-credit {
         position: fixed;
-        top: 12px; /* Tekrar yukarı taşındı */
+        top: 12px;
         left: 50%;
-        transform: translateX(-50%);
+        /* transform: translateX(-50%);  <- Bu satırı animasyonun içine taşıdık */
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
-        font-size: 24px;
-        background: linear-gradient(45deg, #FF4B4B, #FF914D);
+        font-size: 26px; /* Yazıyı biraz daha büyüttük */
+        
+        /* Daha canlı bir gradyan */
+        background: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
+        background-size: 200% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        
         font-weight: bold;
         z-index: 1000001 !important;
         pointer-events: none;
-        text-shadow: 0px 0px 1px rgba(0,0,0,0.1);
         white-space: nowrap;
+        
+        /* Animasyonu uygula: 3 saniyede bir tekrar et */
+        animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
     </style>
     <div class="fixed-design-credit">Design by Oktay</div>
