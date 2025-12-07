@@ -2,18 +2,44 @@ import streamlit as st
 import pymysql
 import pandas as pd
 import time
-from datetime import datetime, timedelta # EKLENDI
-import pytz # EKLENDI
+from datetime import datetime, timedelta
+import pytz
 
 # ---------------------------------------------------------
 # 1. AYARLAR VE GÜVENLİ BAĞLANTI
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="İş Takip Raporu", 
-    page_icon="🏢", 
-    layout="wide", # Geniş görünüm (Tablolar için daha iyi)
+    page_title="İş Takip Raporu",
+    page_icon="🏢",
+    layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# --- TASARIM İMZASI EKLEME (Design by Oktay) ---
+st.markdown("""
+    <style>
+    .fixed-design-credit {
+        position: fixed;
+        top: 12px;
+        right: 70px; /* Streamlit menüsünün soluna yerleşmesi için */
+        font-family: 'Brush Script MT', 'Lucida Handwriting', cursive; /* El yazısı stili */
+        font-size: 20px;
+        color: #FF4B4B; /* Dikkat çekici ama şık bir renk */
+        font-weight: bold;
+        z-index: 99999;
+        pointer-events: none; /* Tıklamaları engellememesi için */
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+    /* Dark mode kullanılıyorsa rengi açık yap */
+    @media (prefers-color-scheme: dark) {
+        .fixed-design-credit {
+            color: #ffbd45;
+        }
+    }
+    </style>
+    <div class="fixed-design-credit">Design by Oktay</div>
+    """, unsafe_allow_html=True)
+# -----------------------------------------------
 
 # Önbellekli Bağlantı Fonksiyonu
 @st.cache_resource
@@ -45,7 +71,7 @@ def run_query(query):
 
 st.title("🏢 DiT  Genel Durum Raporu")
 
-# --- BURASI DÜZELTİLDİ: Danimarka Saati ---
+# --- Danimarka Saati ---
 denmark_zone = pytz.timezone('Europe/Copenhagen')
 dk_saat = datetime.now(denmark_zone).strftime('%d-%m-%Y %H:%M:%S')
 st.caption(f"📅 Rapor Saati (DK): {dk_saat}")
@@ -59,9 +85,8 @@ if st.button("🔄 Verileri Canlı Yenile", type="primary"):
 # 1. Personel
 df_personel = pd.DataFrame(run_query("SELECT kullanici_adi, check_in FROM zaman_kayitlari WHERE check_out IS NULL"))
 
-# --- EKLENEN KISIM: Tablodaki saati 1 saat ileri al (Danimarka ayarı) ---
+# --- Tablodaki saati 1 saat ileri al (Danimarka ayarı) ---
 if not df_personel.empty and 'check_in' in df_personel.columns:
-    # Veritabanından gelen saati datetime formatına çevirip 1 saat ekliyoruz
     df_personel['check_in'] = pd.to_datetime(df_personel['check_in']) + timedelta(hours=1)
 # ------------------------------------------------------------------------
 
@@ -102,7 +127,6 @@ tab_personel, tab_gorev, tab_ariza, tab_izin, tab_toplanti, tab_duyuru = st.tabs
 with tab_personel:
     st.subheader("Şu An İçeride Olanlar")
     if not df_personel.empty:
-        # Tarih formatını düzeltelim
         st.dataframe(
             df_personel, 
             column_config={
