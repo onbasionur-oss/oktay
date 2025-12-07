@@ -15,14 +15,14 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- TASARIM İMZASI (ORTALANMIŞ) ---
+# --- TASARIM İMZASI (ORTADA VE BİRAZ AŞAĞIDA) ---
 st.markdown("""
     <style>
     .fixed-design-credit {
         position: fixed;
-        top: 10px; /* Sayfanın en tepesinden boşluk */
-        left: 50%; /* Sol kenarı sayfanın ortasına getir */
-        transform: translateX(-50%); /* Kendi genişliğinin yarısı kadar geri çek (Tam ortalama) */
+        top: 40px; /* Bir satır aşağı kaydırıldı (Eski değer: 10px) */
+        left: 50%;
+        transform: translateX(-50%);
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
         font-size: 24px;
         background: linear-gradient(45deg, #FF4B4B, #FF914D);
@@ -32,7 +32,7 @@ st.markdown("""
         z-index: 1000001 !important;
         pointer-events: none;
         text-shadow: 0px 0px 1px rgba(0,0,0,0.1);
-        white-space: nowrap; /* Yazının alt satıra geçmesini engelle */
+        white-space: nowrap;
     }
     </style>
     <div class="fixed-design-credit">Design by Oktay</div>
