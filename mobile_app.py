@@ -1,7 +1,8 @@
 import streamlit as st
 import pymysql
 import pandas as pd
-from datetime import datetime # EKLENDI
+import time
+from datetime import datetime, timedelta # EKLENDI
 import pytz # EKLENDI
 
 # ---------------------------------------------------------
@@ -44,11 +45,11 @@ def run_query(query):
 
 st.title("🏢 İşletme Genel Durum Raporu")
 
-# --- BURASI DEĞİŞTİRİLDİ (DANİMARKA SAATİ) ---
+# --- BURASI DÜZELTİLDİ: Danimarka Saati ---
 denmark_zone = pytz.timezone('Europe/Copenhagen')
-current_time_dk = datetime.now(denmark_zone).strftime('%d-%m-%Y %H:%M:%S')
-st.caption(f"📅 Rapor Saati (DK): {current_time_dk}")
-# ---------------------------------------------
+dk_saat = datetime.now(denmark_zone).strftime('%d-%m-%Y %H:%M:%S')
+st.caption(f"📅 Rapor Saati (DK): {dk_saat}")
+# ------------------------------------------
 
 if st.button("🔄 Verileri Canlı Yenile", type="primary"):
     st.cache_data.clear()
@@ -57,6 +58,13 @@ if st.button("🔄 Verileri Canlı Yenile", type="primary"):
 # --- VERİLERİ ÇEKİYORUZ ---
 # 1. Personel
 df_personel = pd.DataFrame(run_query("SELECT kullanici_adi, check_in FROM zaman_kayitlari WHERE check_out IS NULL"))
+
+# --- EKLENEN KISIM: Tablodaki saati 1 saat ileri al (Danimarka ayarı) ---
+if not df_personel.empty and 'check_in' in df_personel.columns:
+    # Veritabanından gelen saati datetime formatına çevirip 1 saat ekliyoruz
+    df_personel['check_in'] = pd.to_datetime(df_personel['check_in']) + timedelta(hours=1)
+# ------------------------------------------------------------------------
+
 # 2. Görevler
 df_gorevler = pd.DataFrame(run_query("SELECT gorev_adi, atanan_kisi, durum, baslama_tarihi FROM gorevler WHERE durum != 'Tamamlandı' ORDER BY baslama_tarihi ASC"))
 # 3. Arızalar
