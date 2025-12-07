@@ -1,184 +1,138 @@
 import streamlit as st
-import pymysql
 import pandas as pd
-import time
+import pymysql
+from datetime import datetime
+import pytz  # Saat dilimi kütüphanesi
 
-# ---------------------------------------------------------
-# 1. AYARLAR VE GÜVENLİ BAĞLANTI
-# ---------------------------------------------------------
-st.set_page_config(
-    page_title="İş Takip Raporu", 
-    page_icon="🏢", 
-    layout="wide", # Geniş görünüm (Tablolar için daha iyi)
-    initial_sidebar_state="collapsed"
-)
+# ==========================================
+# AYARLAR: VERİTABANI BİLGİLERİNİ GİRİNİZ
+# ==========================================
+DB_CONFIG = {
+    'host': 'localhost',          # Sunucu IP adresi veya domain
+    'user': 'root',               # Veritabanı kullanıcı adı
+    'password': '',               # Veritabanı şifresi
+    'database': 'test_db',        # Veritabanı adı
+    'port': 3306,
+    'cursorclass': pymysql.cursors.DictCursor
+}
 
-# Önbellekli Bağlantı Fonksiyonu
-@st.cache_resource
-def get_connection():
-    return pymysql.connect(
-        host=st.secrets["db"]["host"],
-        user=st.secrets["db"]["user"],
-        password=st.secrets["db"]["password"],
-        database=st.secrets["db"]["database"],
-        port=st.secrets["db"]["port"],
-        charset='utf8mb4',
-        cursorclass=pymysql.cursors.DictCursor
-    )
+# Danimarka Saat Dilimi
+TIMEZONE = 'Europe/Copenhagen'
 
-def run_query(query):
+# ==========================================
+# YARDIMCI FONKSİYONLAR
+# ==========================================
+
+def get_db_connection():
+    """Veritabanına bağlanır."""
     try:
-        conn = get_connection()
-        conn.ping(reconnect=True)
-        with conn.cursor() as cursor:
-            cursor.execute(query)
-            return cursor.fetchall()
-    except Exception as e:
-        st.error(f"Veri çekme hatası: {e}")
-        return []
+        connection = pymysql.connect(**DB_CONFIG)
+        return connection
+    except pymysql.MySQLError as e:
+        st.error(f"Veritabanı bağlantı hatası: {e}")
+        return None
 
-# ---------------------------------------------------------
-# 2. ÜST PANEL VE ÖZET (KPI)
-# ---------------------------------------------------------
+def get_current_time_denmark():
+    """Anlık saati Danimarka dilimine göre döndürür."""
+    denmark_zone = pytz.timezone(TIMEZONE)
+    return datetime.now(denmark_zone)
 
-st.title("🏢 İşletme Genel Durum Raporu")
-st.caption(f"📅 Rapor Saati: {time.strftime('%d-%m-%Y %H:%M:%S')}")
+def add_log(user, action):
+    """Veritabanına log kaydı atar."""
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                # Danimarka saatini al
+                now_dk = get_current_time_denmark()
+                
+                # SQL Sorgusu (Tablo adı: is_takip_loglari)
+                sql = """
+                INSERT INTO is_takip_loglari (kullanici_adi, islem_tipi, islem_zamani)
+                VALUES (%s, %s, %s)
+                """
+                cursor.execute(sql, (user, action, now_dk))
+            conn.commit()
+            return now_dk
+        except Exception as e:
+            st.error(f"Kayıt sırasında hata: {e}")
+            return None
+        finally:
+            conn.close()
+    return None
 
-if st.button("🔄 Verileri Canlı Yenile", type="primary"):
-    st.cache_data.clear()
-    st.rerun()
+def get_last_logs():
+    """Son 10 kaydı listeler."""
+    conn = get_db_connection()
+    if conn:
+        try:
+            sql = "SELECT * FROM is_takip_loglari ORDER BY islem_zamani DESC LIMIT 10"
+            df = pd.read_sql(sql, conn)
+            return df
+        except Exception as e:
+            st.error(f"Veri çekme hatası: {e}")
+            return pd.DataFrame() # Boş döndür
+        finally:
+            conn.close()
+    return pd.DataFrame()
 
-# --- VERİLERİ ÇEKİYORUZ ---
-# 1. Personel
-df_personel = pd.DataFrame(run_query("SELECT kullanici_adi, check_in FROM zaman_kayitlari WHERE check_out IS NULL"))
-# 2. Görevler
-df_gorevler = pd.DataFrame(run_query("SELECT gorev_adi, atanan_kisi, durum, baslama_tarihi FROM gorevler WHERE durum != 'Tamamlandı' ORDER BY baslama_tarihi ASC"))
-# 3. Arızalar
-df_arizalar = pd.DataFrame(run_query("SELECT ariza_baslik, durum, gonderen_kullanici_adi, bildirim_tarihi FROM ariza_bildirimleri WHERE durum != 'Cozuldu'"))
-# 4. İzinler (Bekleyenler)
-df_izinler = pd.DataFrame(run_query("SELECT kullanici_adi, baslangic_tarihi, bitis_tarihi, talep_gun_sayisi FROM tatil_talepleri WHERE onay_durumu = 'Beklemede'"))
-# 5. Toplantılar (Bugün ve Sonrası)
-df_toplanti = pd.DataFrame(run_query("SELECT salon_adi, baslangic_zamani, konu, rezerve_eden_adi FROM rezervasyonlar WHERE baslangic_zamani >= CURDATE() ORDER BY baslangic_zamani"))
-# 6. Duyurular
-df_duyuru = pd.DataFrame(run_query("SELECT baslik, icerik, olusturma_tarihi FROM duyurular ORDER BY id DESC LIMIT 5"))
+# ==========================================
+# ANA UYGULAMA (UI)
+# ==========================================
 
-# --- ÖZET KUTUCUKLARI (METRICS) ---
-col1, col2, col3, col4 = st.columns(4)
+def main():
+    st.set_page_config(page_title="İş Takip", page_icon="🇩🇰")
+    
+    st.title("🇩🇰 Mobil İş Takip")
+    
+    # Anlık Saati Göster (Kontrol Amaçlı)
+    simdi = get_current_time_denmark()
+    st.caption(f"Sunucu Saati (Danimarka): {simdi.strftime('%d.%m.%Y %H:%M:%S')}")
 
-with col1:
-    st.metric(label="👥 Aktif Personel", value=len(df_personel))
-with col2:
-    st.metric(label="📋 Açık Görev", value=len(df_gorevler))
-with col3:
-    st.metric(label="⚠️ Aktif Arıza", value=len(df_arizalar), delta_color="inverse")
-with col4:
-    st.metric(label="✈️ Bekleyen İzin", value=len(df_izinler))
+    st.divider()
 
-st.markdown("---")
+    # Kullanıcı Girişi
+    kullanici = st.text_input("Adınız Soyadınız:", placeholder="Örn: Ahmet Yılmaz")
 
-# ---------------------------------------------------------
-# 3. DETAYLI SEKMELER (TÜM BÖLÜMLER)
-# ---------------------------------------------------------
+    # Butonlar (Yan Yana)
+    col1, col2 = st.columns(2)
 
-tab_personel, tab_gorev, tab_ariza, tab_izin, tab_toplanti, tab_duyuru = st.tabs([
-    "👷‍♂️ Personel", "📝 Görevler", "🛠️ Arızalar", "✈️ İzinler", "📅 Toplantı", "📢 Duyurular"
-])
+    with col1:
+        if st.button("🟢 İşe Başla", use_container_width=True):
+            if not kullanici:
+                st.warning("Lütfen önce adınızı girin!")
+            else:
+                kayit_zamani = add_log(kullanici, "Giris")
+                if kayit_zamani:
+                    saat_str = kayit_zamani.strftime('%H:%M')
+                    st.success(f"Başladınız! Saat: {saat_str}")
 
-# --- TAB 1: PERSONEL DURUMU ---
-with tab_personel:
-    st.subheader("Şu An İçeride Olanlar")
-    if not df_personel.empty:
-        # Tarih formatını düzeltelim
-        st.dataframe(
-            df_personel, 
-            column_config={
-                "kullanici_adi": "Personel Adı",
-                "check_in": st.column_config.DatetimeColumn("Giriş Saati", format="D MMM, HH:mm")
-            },
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.info("Şu an içeride aktif çalışan görünmüyor.")
+    with col2:
+        if st.button("🔴 Paydos", use_container_width=True):
+            if not kullanici:
+                st.warning("Lütfen önce adınızı girin!")
+            else:
+                kayit_zamani = add_log(kullanici, "Cikis")
+                if kayit_zamani:
+                    saat_str = kayit_zamani.strftime('%H:%M')
+                    st.info(f"Çıkış yapıldı. Saat: {saat_str}")
 
-# --- TAB 2: GÖREVLER ---
-with tab_gorev:
-    st.subheader("Tamamlanmamış Görevler")
-    if not df_gorevler.empty:
-        st.dataframe(
-            df_gorevler,
-            column_config={
-                "gorev_adi": "Görev",
-                "atanan_kisi": "Sorumlu",
-                "durum": "Durum",
-                "baslama_tarihi": st.column_config.DateColumn("Başlama", format="DD-MM-YYYY")
-            },
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.success("Harika! Tüm görevler tamamlanmış.")
+    st.divider()
 
-# --- TAB 3: ARIZALAR ---
-with tab_ariza:
-    st.subheader("Aktif Arıza Bildirimleri")
-    if not df_arizalar.empty:
-        st.dataframe(
-            df_arizalar,
-            column_config={
-                "ariza_baslik": "Arıza Konusu",
-                "durum": "Durum",
-                "gonderen_kullanici_adi": "Bildiren",
-                "bildirim_tarihi": st.column_config.DatetimeColumn("Bildirim Zamanı", format="D/M HH:mm")
-            },
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.success("Sistemde çözülmemiş arıza yok.")
+    # Geçmiş Kayıtları Göster
+    st.subheader("📋 Son Hareketler")
+    if st.checkbox("Listeyi Göster/Yenile"):
+        df = get_last_logs()
+        if not df.empty:
+            # Tabloyu daha şık göstermek için sütun adlarını düzenleyelim
+            df = df.rename(columns={
+                'kullanici_adi': 'Personel',
+                'islem_tipi': 'Durum',
+                'islem_zamani': 'Zaman'
+            })
+            st.dataframe(df, use_container_width=True)
+        else:
+            st.info("Henüz kayıt bulunmuyor.")
 
-# --- TAB 4: İZİNLER ---
-with tab_izin:
-    st.subheader("Onay Bekleyen Tatil Talepleri")
-    if not df_izinler.empty:
-        st.dataframe(
-            df_izinler,
-            column_config={
-                "kullanici_adi": "Personel",
-                "baslangic_tarihi": st.column_config.DateColumn("Başlangıç", format="DD-MM-YYYY"),
-                "bitis_tarihi": st.column_config.DateColumn("Bitiş", format="DD-MM-YYYY"),
-                "talep_gun_sayisi": "Gün"
-            },
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.info("Onay bekleyen izin talebi yok.")
-
-# --- TAB 5: TOPLANTILAR ---
-with tab_toplanti:
-    st.subheader("Yaklaşan Toplantı Rezervasyonları")
-    if not df_toplanti.empty:
-        st.dataframe(
-            df_toplanti,
-            column_config={
-                "salon_adi": "Salon",
-                "konu": "Toplantı Konusu",
-                "rezerve_eden_adi": "Rezerve Eden",
-                "baslangic_zamani": st.column_config.DatetimeColumn("Başlama", format="D MMM, HH:mm")
-            },
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.info("Yakın zamanda planlanmış toplantı yok.")
-
-# --- TAB 6: DUYURULAR ---
-with tab_duyuru:
-    st.subheader("Son Duyurular")
-    if not df_duyuru.empty:
-        for index, row in df_duyuru.iterrows():
-            with st.expander(f"📢 {row['baslik']} ({row['olusturma_tarihi'].strftime('%d-%m-%Y')})"):
-                st.write(row['icerik'])
-    else:
-        st.info("Henüz duyuru yapılmamış.")
+if __name__ == "__main__":
+    main()
