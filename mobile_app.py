@@ -6,11 +6,11 @@ from datetime import datetime, timedelta
 import pytz
 
 # ---------------------------------------------------------
-# 1. AYARLAR VE TASARIM (Siren İkonlu 🚨)
+# 1. AYARLAR VE TASARIM (Merkez İkonlu 🏢)
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="İş Takip Sistemi",
-    page_icon="🚨",
+    page_title="Merkez İş Takip",
+    page_icon="🏢",  # DEĞİŞTİ: Merkez Simgesi
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -81,7 +81,8 @@ def run_update(query, params=None):
 # ---------------------------------------------------------
 # 3. VERİ HAZIRLIĞI & OTO YENİLEME
 # ---------------------------------------------------------
-st.title("🚨 Merkez Genel Durum Raporu")
+# BAŞLIK GÜNCELLENDİ
+st.title("🏢 Merkez Genel Durum Raporu")
 
 # Danimarka Saati
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
