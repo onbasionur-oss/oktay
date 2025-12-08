@@ -38,9 +38,10 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. VERİTABANI BAĞLANTISI
+# 2. VERİTABANI BAĞLANTISI (ÖNBELLEK KAPALI)
 # ---------------------------------------------------------
-@st.cache_resource
+# ttl=0 diyerek veriyi saklamasını engelliyoruz, her seferinde taze veri çekecek.
+@st.cache_resource(ttl=0)
 def get_connection():
     try:
         return pymysql.connect(
@@ -50,17 +51,17 @@ def get_connection():
             database=st.secrets["db"]["database"],
             port=st.secrets["db"]["port"],
             charset='utf8mb4',
-            cursorclass=pymysql.cursors.DictCursor
+            cursorclass=pymysql.cursors.DictCursor,
+            autocommit=True # Veritabanı değişikliklerini anında gör
         )
     except Exception as e:
-        st.error(f"⚠️ Veritabanı Bağlantı Hatası: {e}")
         return None
 
 def run_query(query, params=None):
     conn = get_connection()
     if not conn: return []
     try:
-        conn.ping(reconnect=True)
+        # conn.ping(reconnect=True) # Bağlantıyı taze tut
         with conn.cursor() as cursor:
             cursor.execute(query, params)
             return cursor.fetchall()
@@ -71,55 +72,75 @@ def run_update(query, params=None):
     conn = get_connection()
     if not conn: return False
     try:
-        conn.ping(reconnect=True)
+        # conn.ping(reconnect=True)
         with conn.cursor() as cursor:
             cursor.execute(query, params)
             conn.commit()
             return True
     except Exception as e:
-        st.error(f"Güncelleme Hatası: {e}")
+        st.error(f"Hata: {e}")
         return False
 
 # ---------------------------------------------------------
-# 3. VERİ HAZIRLIĞI
+# 3. VERİ HAZIRLIĞI & OTOMATİK YENİLEME
 # ---------------------------------------------------------
 st.title("🚨 Merkez Genel Durum Raporu")
-dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
 
-col1, col2 = st.columns([3, 1])
-col1.caption(f"📅 Rapor Saati (DK): {dk_saat}")
-if col2.button("🔄 Verileri Canlı Yenile", type="primary"):
-    st.cache_data.clear()
-    st.rerun()
+# --- DANİMARKA SAATİ ---
+dk_zone = pytz.timezone('Europe/Copenhagen')
+dk_saat = datetime.now(dk_zone).strftime('%d-%m-%Y %H:%M:%S')
 
-# --- 1. PERSONEL VERİSİ (GARANTİ YÖNTEM) ---
-# Limiti artırdık (500) ki aktif olanlar listenin sonunda kalmasın
+# --- ÜST PANEL ---
+col1, col2, col3 = st.columns([2, 1, 1])
+
+with col1:
+    st.caption(f"📅 Rapor Saati (DK): {dk_saat}")
+
+with col2:
+    # OTOMATİK YENİLEME SEÇENEĞİ
+    oto_yenile = st.checkbox("🔄 Otomatik Yenile (30sn)", value=False)
+
+with col3:
+    if st.button("🔄 Şimdi Yenile", type="primary"):
+        st.cache_data.clear()
+        st.rerun()
+
+# Otomatik Yenileme Mantığı
+if oto_yenile:
+    time.sleep(30) # 30 saniye bekle
+    st.rerun()     # Sayfayı yenile
+
+# ---------------------------------------------------------
+# 4. VERİ ÇEKME VE İŞLEME
+# ---------------------------------------------------------
+
+# 1. PERSONEL VERİSİ (HEM GİRİŞ HEM ÇIKIŞ)
 raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 500")
 df_tum_hareketler = pd.DataFrame(raw_personel)
 df_aktif_personel = pd.DataFrame()
 
 if not df_tum_hareketler.empty:
-    # Sütun isimlerini bul
+    # Sütun İsimlerini Bul
     col_giris = next((c for c in ['check_in', 'giris', 'giris_zamani'] if c in df_tum_hareketler.columns), None)
     col_cikis = next((c for c in ['check_out', 'cikis', 'cikis_zamani'] if c in df_tum_hareketler.columns), None)
 
-    # Giriş Saatlerini Formatla (+1 Saat Ekle)
+    # 1. Giriş saatini formatla (+1 Saat)
     if col_giris:
         df_tum_hareketler[col_giris] = pd.to_datetime(df_tum_hareketler[col_giris], errors='coerce') + timedelta(hours=1)
 
-    # --- KİM İÇERİDE? (MANTIKSAL FİLTRELEME) ---
+    # 2. AKTİF PERSONEL MANTIĞI (Çok Hassas Kontrol)
     if col_cikis:
-        # Geçici bir sütun oluşturup tarih mi değil mi kontrol ediyoruz
-        # errors='coerce' sayesinde '0000-00-00', boşluk veya NULL olanlar NaT (Yok) olur.
-        temp_cikis_series = pd.to_datetime(df_tum_hareketler[col_cikis], errors='coerce')
+        # Çıkış verisini tarihe çevir
+        temp_cikis = pd.to_datetime(df_tum_hareketler[col_cikis], errors='coerce')
         
-        # Çıkış saati formatla (Görsel Liste İçin)
-        df_tum_hareketler[col_cikis] = temp_cikis_series + timedelta(hours=1)
-        
-        # AKTİF FİLTRESİ: Dönüştürüldüğünde "NaT" (Tarih Yok) kalanlar hala içeridedir.
-        df_aktif_personel = df_tum_hareketler[temp_cikis_series.isna()].copy()
+        # Çıkış saati tablosunu güncelle (+1 Saat ekle) - Sadece geçerli tarihleri
+        df_tum_hareketler[col_cikis] = temp_cikis + timedelta(hours=1)
+
+        # Kural: Tarihe çevrildiğinde 'NaT' (Yok) olanlar, veritabanında NULL veya boş olanlardır.
+        # Bu kişiler hala içeridedir.
+        df_aktif_personel = df_tum_hareketler[temp_cikis.isna()].copy()
     else:
-        # Çıkış sütunu hiç yoksa hepsi içeride varsayılır
+        # Çıkış sütunu yoksa hepsi içeride varsayılır
         df_aktif_personel = df_tum_hareketler.copy()
 
 # 2. Görevler
@@ -146,7 +167,7 @@ k4.metric("✈️ İzinler", len(df_izinler))
 st.markdown("---")
 
 # ---------------------------------------------------------
-# 4. DETAYLI SEKMELER
+# 5. DETAYLI SEKMELER
 # ---------------------------------------------------------
 
 tab_personel, tab_gorev, tab_ariza, tab_izin, tab_toplanti, tab_duyuru = st.tabs([
@@ -157,13 +178,14 @@ tab_personel, tab_gorev, tab_ariza, tab_izin, tab_toplanti, tab_duyuru = st.tabs
 with tab_personel:
     col_sol, col_sag = st.columns(2)
     
-    # SOL: Aktif Olanlar (Sadece Girenler)
+    # SOL: AKTİF OLANLAR
     with col_sol:
         st.subheader("🟢 Şu An İçeride Olanlar")
         if not df_aktif_personel.empty:
             ad_col = next((c for c in ['kullanici_adi', 'ad_soyad', 'personel'] if c in df_aktif_personel.columns), df_aktif_personel.columns[0])
             giris_col = next((c for c in ['check_in', 'giris'] if c in df_aktif_personel.columns), None)
             
+            # Sütun listesi
             cols_show = [ad_col]
             if giris_col: cols_show.append(giris_col)
             
@@ -178,7 +200,7 @@ with tab_personel:
         else:
             st.info("Kimse içeride görünmüyor.")
 
-    # SAĞ: Tüm Hareketler (Giriş ve Çıkış Saatleri ile)
+    # SAĞ: TÜM HAREKETLER (LOG)
     with col_sag:
         st.subheader("📋 Son Giriş/Çıkış Hareketleri")
         if not df_tum_hareketler.empty:
@@ -186,7 +208,6 @@ with tab_personel:
             g_c = next((c for c in ['check_in', 'giris'] if c in df_tum_hareketler.columns), None)
             c_c = next((c for c in ['check_out', 'cikis'] if c in df_tum_hareketler.columns), None)
             
-            # Sütunları seç
             cols_log = [c for c in [ad_c, g_c, c_c] if c]
             
             st.dataframe(
