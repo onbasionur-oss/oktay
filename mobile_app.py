@@ -15,30 +15,23 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- TASARIM İMZASI (SOLA YANAŞIK & EFEKTLİ) ---
+# --- TASARIM İMZASI ---
 st.markdown("""
     <style>
     @keyframes gentle-pulse-glow {
-        0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
-        50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
-        100% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
+        0% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.02); opacity: 1; }
+        100% { transform: scale(1); opacity: 0.9; }
     }
     .fixed-design-credit {
-        position: fixed; top: 12px; left: 20px;
-        font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
-        font-size: 26px;
-        background: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
-        background-size: 200% auto;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: bold;
-        z-index: 1000001 !important;
-        pointer-events: none;
-        white-space: nowrap;
-        animation: gentle-pulse-glow 3s ease-in-out infinite;
+        position: fixed; top: 10px; left: 20px;
+        font-family: 'Brush Script MT', cursive; font-size: 24px;
+        background: linear-gradient(to right, #FF4B4B, #FF914D);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        font-weight: bold; z-index: 9999; animation: gentle-pulse-glow 3s infinite;
     }
-    /* Tablo ve Buton Düzenlemeleri */
-    .stButton button { width: 100%; }
+    .stButton button { width: 100%; border-radius: 8px; }
+    .metric-card { background-color: #f0f2f6; padding: 15px; border-radius: 10px; text-align: center; }
     </style>
     <div class="fixed-design-credit">Design by Oktay</div>
     """, unsafe_allow_html=True)
@@ -48,7 +41,6 @@ st.markdown("""
 # ---------------------------------------------------------
 @st.cache_resource
 def get_connection():
-    """Veritabanı bağlantısını oluşturur."""
     try:
         return pymysql.connect(
             host=st.secrets["db"]["host"],
@@ -60,221 +52,195 @@ def get_connection():
             cursorclass=pymysql.cursors.DictCursor
         )
     except Exception as e:
-        st.error(f"⚠️ Veritabanı bağlantı hatası: {e}")
+        st.error(f"⚠️ Bağlantı Hatası: {e}")
         return None
 
-# --- VERİ OKUMA FONKSİYONU ---
+# VERİ OKUMA
 def run_query(query, params=None):
     conn = get_connection()
-    if conn is None: return []
+    if not conn: return []
     try:
         conn.ping(reconnect=True)
         with conn.cursor() as cursor:
             cursor.execute(query, params)
             return cursor.fetchall()
     except Exception as e:
-        st.error(f"Veri Çekme Hatası: {e}")
+        st.warning(f"Sorgu uyarısı: {e}") # Hata yerine uyarı verelim ki sayfa çökmesin
         return []
 
-# --- VERİ GÜNCELLEME FONKSİYONU (UPDATE İÇİN) ---
+# VERİ GÜNCELLEME (UPDATE)
 def run_update(query, params=None):
     conn = get_connection()
-    if conn is None: return False
+    if not conn: return False
     try:
         conn.ping(reconnect=True)
         with conn.cursor() as cursor:
             cursor.execute(query, params)
-            conn.commit() # Değişikliği kaydet
+            conn.commit()
             return True
     except Exception as e:
         st.error(f"Güncelleme Hatası: {e}")
         return False
 
 # ---------------------------------------------------------
-# 3. ÜST PANEL VE VERİ HAZIRLIĞI
+# 3. VERİ HAZIRLIĞI
 # ---------------------------------------------------------
+st.title("🏢 Merkez Genel Durum Raporu")
 
-st.title("🏢 Merkez Genel Durum Raporu 📢")
-
-# --- Danimarka Saati ---
-denmark_zone = pytz.timezone('Europe/Copenhagen')
-dk_saat = datetime.now(denmark_zone).strftime('%d-%m-%Y %H:%M:%S')
+# Danimarka Saati
+dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
 
 col1, col2 = st.columns([3, 1])
-with col1:
-    st.caption(f"📅 Rapor Saati (DK): {dk_saat}")
-with col2:
-    if st.button("🔄 Verileri Canlı Yenile", type="primary"):
-        st.cache_data.clear()
-        st.rerun()
+col1.caption(f"📅 Rapor Saati (DK): {dk_saat}")
+if col2.button("🔄 Yenile", type="primary"):
+    st.cache_data.clear()
+    st.rerun()
 
-# --- VERİLERİ ÇEK ---
+# --- VERİLERİ GÜVENLİ ÇEKME ---
 
 # 1. Personel
-df_personel = pd.DataFrame(run_query("SELECT kullanici_adi, check_in FROM zaman_kayitlari WHERE check_out IS NULL"))
+df_personel = pd.DataFrame(run_query("SELECT * FROM zaman_kayitlari WHERE check_out IS NULL"))
 if not df_personel.empty and 'check_in' in df_personel.columns:
     df_personel['check_in'] = pd.to_datetime(df_personel['check_in'], errors='coerce') + timedelta(hours=1)
 
-# 2. Görevler (Tamamlanmamışlar)
-df_gorevler = pd.DataFrame(run_query("SELECT gorev_adi, atanan_kisi, durum, baslama_tarihi FROM gorevler WHERE durum NOT IN ('Tamamlandı', 'Tamamlandi') ORDER BY baslama_tarihi ASC"))
+# 2. Görevler
+df_gorevler = pd.DataFrame(run_query("SELECT * FROM gorevler WHERE durum NOT IN ('Tamamlandı', 'Tamamlandi')"))
 
-# 3. Arızalar (Çözülmemişler) - 'aciklama' sütunu kaldırıldı (Hata önleme)
-ariza_sorgusu = """
-    SELECT id, ariza_baslik, durum, gonderen_kullanici_adi, bildirim_tarihi 
-    FROM ariza_bildirimleri 
-    WHERE durum NOT IN ('Cozuldu', 'Çözüldü', 'İptal')
-    ORDER BY bildirim_tarihi DESC
-"""
-df_arizalar = pd.DataFrame(run_query(ariza_sorgusu))
-if not df_arizalar.empty and 'bildirim_tarihi' in df_arizalar.columns:
-    df_arizalar['bildirim_tarihi'] = pd.to_datetime(df_arizalar['bildirim_tarihi'], errors='coerce')
+# 3. Arızalar (Hata vermemesi için SELECT * kullanıyoruz, sütunları Python'da seçeceğiz)
+df_arizalar = pd.DataFrame(run_query("SELECT * FROM ariza_bildirimleri WHERE durum NOT IN ('Cozuldu', 'Çözüldü', 'İptal') ORDER BY id DESC"))
+if not df_arizalar.empty:
+    # Tarih sütununu bulmaya çalış (farklı isimler olabilir)
+    date_col = next((col for col in ['bildirim_tarihi', 'tarih', 'created_at'] if col in df_arizalar.columns), None)
+    if date_col:
+        df_arizalar[date_col] = pd.to_datetime(df_arizalar[date_col], errors='coerce')
 
-# 4. İzinler (Bekleyenler)
-df_izinler = pd.DataFrame(run_query("SELECT kullanici_adi, baslangic_tarihi, bitis_tarihi, talep_gun_sayisi FROM tatil_talepleri WHERE onay_durumu = 'Beklemede'"))
+# 4. İzinler
+df_izinler = pd.DataFrame(run_query("SELECT * FROM tatil_talepleri WHERE onay_durumu = 'Beklemede'"))
 
 # 5. Toplantılar
-df_toplanti = pd.DataFrame(run_query("SELECT salon_adi, baslangic_zamani, konu, rezerve_eden_adi FROM rezervasyonlar WHERE baslangic_zamani >= CURDATE() ORDER BY baslangic_zamani"))
+df_toplanti = pd.DataFrame(run_query("SELECT * FROM rezervasyonlar WHERE baslangic_zamani >= CURDATE()"))
 
 # 6. Duyurular
-df_duyuru = pd.DataFrame(run_query("SELECT baslik, icerik, olusturma_tarihi FROM duyurular ORDER BY id DESC LIMIT 5"))
-if not df_duyuru.empty and 'olusturma_tarihi' in df_duyuru.columns:
-    df_duyuru['olusturma_tarihi'] = pd.to_datetime(df_duyuru['olusturma_tarihi'], errors='coerce')
+df_duyuru = pd.DataFrame(run_query("SELECT * FROM duyurular ORDER BY id DESC LIMIT 5"))
 
-# --- ÖZET KUTUCUKLARI (KPI) ---
+# --- KPI ÖZET ---
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("👥 Aktif Personel", len(df_personel))
-k2.metric("📋 Açık Görev", len(df_gorevler))
-k3.metric("⚠️ Aktif Arıza", len(df_arizalar), delta_color="inverse")
-k4.metric("✈️ Bekleyen İzin", len(df_izinler))
+k1.metric("👥 Personel", len(df_personel))
+k2.metric("📋 Görev", len(df_gorevler))
+k3.metric("⚠️ Arıza", len(df_arizalar), delta_color="inverse")
+k4.metric("✈️ İzin", len(df_izinler))
 
 st.markdown("---")
 
 # ---------------------------------------------------------
 # 4. DETAYLI SEKMELER
 # ---------------------------------------------------------
-
 tab_personel, tab_gorev, tab_ariza, tab_izin, tab_toplanti, tab_duyuru = st.tabs([
     "👷‍♂️ Personel", "📝 Görevler", "🛠️ Arıza İşlemleri", "✈️ İzinler", "📅 Toplantı", "📢 Duyurular"
 ])
 
-# --- TAB 1: PERSONEL ---
+# TAB 1: Personel
 with tab_personel:
-    st.subheader("Şu An İçeride Olanlar")
     if not df_personel.empty:
-        st.dataframe(
-            df_personel, 
-            column_config={
-                "kullanici_adi": "Personel Adı",
-                "check_in": st.column_config.DatetimeColumn("Giriş Saati", format="D MMM, HH:mm")
-            },
-            use_container_width=True, hide_index=True
-        )
+        # Sütun adı eşleştirme (kullanici_adi yoksa ad_soyad kullan vb.)
+        isim_col = next((c for c in ['kullanici_adi', 'ad_soyad', 'personel'] if c in df_personel.columns), 'Bilinmiyor')
+        st.dataframe(df_personel[[isim_col, 'check_in']], use_container_width=True, hide_index=True)
     else:
-        st.info("Şu an içeride aktif çalışan görünmüyor.")
+        st.info("İçeride kimse yok.")
 
-# --- TAB 2: GÖREVLER ---
+# TAB 2: Görevler
 with tab_gorev:
-    st.subheader("Devam Eden Görevler")
     if not df_gorevler.empty:
-        st.dataframe(
-            df_gorevler,
-            column_config={
-                "gorev_adi": "Görev",
-                "atanan_kisi": "Sorumlu",
-                "durum": "Durum",
-                "baslama_tarihi": st.column_config.DateColumn("Başlama", format="DD-MM-YYYY")
-            },
-            use_container_width=True, hide_index=True
-        )
+        g_ad = next((c for c in ['gorev_adi', 'baslik'] if c in df_gorevler.columns), 'Görev')
+        g_kisi = next((c for c in ['atanan_kisi', 'sorumlu'] if c in df_gorevler.columns), 'Sorumlu')
+        st.dataframe(df_gorevler[[g_ad, g_kisi, 'durum']], use_container_width=True, hide_index=True)
     else:
-        st.success("Tüm görevler tamamlanmış.")
+        st.success("Tüm görevler tamam.")
 
-# --- TAB 3: ARIZALAR (GÜNCELLEME ÖZELLİKLİ & HATASIZ) ---
+# TAB 3: Arızalar (GÜÇLENDİRİLMİŞ MOD)
 with tab_ariza:
-    st.subheader("🛠️ Arıza Listesi ve Durum Güncelleme")
+    st.subheader("🛠️ Arıza Yönetimi")
     
     if not df_arizalar.empty:
-        # Her bir arıza satırı için döngü
         for index, row in df_arizalar.iterrows():
+            # Güvenli Veri Çekme (Sütun ismi yanlış olsa bile kod patlamaz)
+            r_id = row.get('id', index)
+            r_baslik = row.get('ariza_baslik', row.get('baslik', row.get('konu', 'Başlık Yok')))
+            r_durum = row.get('durum', 'Belirsiz')
+            r_gonderen = row.get('gonderen_kullanici_adi', row.get('kullanici_adi', 'Anonim'))
             
-            # Expander Başlığı
-            baslik = f"⚠️ #{row['id']} - {row['ariza_baslik']} ({row['gonderen_kullanici_adi']})"
-            
-            with st.expander(baslik):
-                c_detay, c_aksiyon = st.columns([2, 1])
-                
-                with c_detay:
-                    # Tarih Gösterimi
-                    tarih_str = row['bildirim_tarihi'].strftime('%d-%m-%Y %H:%M') if pd.notnull(row['bildirim_tarihi']) else "Belirsiz"
-                    st.markdown(f"**📅 Tarih:** {tarih_str}")
-                    st.markdown(f"**👤 Bildiren:** {row['gonderen_kullanici_adi']}")
-                    st.info(f"Mevcut Durum: **{row['durum']}**")
+            # Tarihi formatla
+            date_col = next((col for col in ['bildirim_tarihi', 'tarih'] if col in row.index), None)
+            tarih_str = row[date_col].strftime('%d-%m %H:%M') if date_col and pd.notnull(row[date_col]) else "Tarih Yok"
 
-                with c_aksiyon:
-                    st.write("**Durumu Güncelle:**")
-                    # Seçim Kutusu
+            # Tasarım Kartı
+            with st.expander(f"⚠️ #{r_id} {r_baslik} ({r_gonderen})"):
+                c1, c2 = st.columns([2, 1])
+                with c1:
+                    st.write(f"**Tarih:** {tarih_str}")
+                    st.write(f"**Bildiren:** {r_gonderen}")
+                    st.info(f"Mevcut Durum: {r_durum}")
+                    # Açıklama sütunu varsa göster
+                    aciklama = row.get('aciklama', row.get('detay', None))
+                    if aciklama:
+                        st.write(f"**Detay:** {aciklama}")
+                
+                with c2:
+                    st.write("**Durumu Değiştir:**")
                     yeni_durum = st.selectbox(
-                        "Seçiniz:",
+                        "Seçiniz:", 
                         ["Beklemede", "İşlemde", "Parça Bekleniyor", "Cozuldu", "İptal"],
-                        key=f"sel_{row['id']}",
+                        key=f"sel_{r_id}",
                         index=0
                     )
                     
-                    # Güncelle Butonu
-                    if st.button(f"💾 Kaydet (ID: {row['id']})", key=f"btn_{row['id']}", type="primary"):
-                        sql = "UPDATE ariza_bildirimleri SET durum = %s WHERE id = %s"
-                        basari = run_update(sql, (yeni_durum, row['id']))
-                        
-                        if basari:
-                            st.success("✅ Güncellendi! Sayfa yenileniyor...")
-                            time.sleep(1)
-                            st.rerun()
+                    if st.button(f"💾 Kaydet (#{r_id})", key=f"btn_{r_id}", type="primary"):
+                        if 'id' in row:
+                            sql = "UPDATE ariza_bildirimleri SET durum = %s WHERE id = %s"
+                            res = run_update(sql, (yeni_durum, row['id']))
+                            if res:
+                                st.success("Güncellendi!")
+                                time.sleep(0.5)
+                                st.rerun()
+                            else:
+                                st.error("Hata oluştu.")
                         else:
-                            st.error("❌ Hata oluştu.")
+                            st.error("Bu kayıtta ID bulunamadı, güncellenemez.")
     else:
-        st.success("🎉 Harika! Şu an aktif bir arıza yok.")
+        st.success("Aktif arıza yok.")
+        
+        # DEBUG: Eğer veritabanı boşsa veya sorgu yanlışsa burası görünür
+        with st.expander("Yönetici Kontrolü (Veri Gelmiyor mu?)"):
+            st.write("Veritabanından çekilen ham satır sayısı:", len(df_arizalar))
+            st.write("Kullanılan Sorgu: SELECT * FROM ariza_bildirimleri ...")
+            if st.button("Tüm Filtreleri Kaldır ve Göster"):
+                raw = run_query("SELECT * FROM ariza_bildirimleri LIMIT 5")
+                st.write(raw)
 
-# --- TAB 4: İZİNLER ---
+# TAB 4: İzinler
 with tab_izin:
-    st.subheader("Onay Bekleyen Talepler")
     if not df_izinler.empty:
-        st.dataframe(
-            df_izinler,
-            column_config={
-                "kullanici_adi": "Personel",
-                "baslangic_tarihi": st.column_config.DateColumn("Başlangıç", format="DD-MM-YYYY"),
-                "bitis_tarihi": st.column_config.DateColumn("Bitiş", format="DD-MM-YYYY"),
-                "talep_gun_sayisi": "Gün"
-            },
-            use_container_width=True, hide_index=True
-        )
+        st.dataframe(df_izinler, use_container_width=True, hide_index=True)
     else:
-        st.info("Bekleyen izin talebi yok.")
+        st.info("Talep yok.")
 
-# --- TAB 5: TOPLANTILAR ---
+# TAB 5: Toplantı
 with tab_toplanti:
-    st.subheader("Yaklaşan Toplantılar")
     if not df_toplanti.empty:
-        st.dataframe(
-            df_toplanti,
-            column_config={
-                "salon_adi": "Salon",
-                "konu": "Konu",
-                "rezerve_eden_adi": "Rezerve Eden",
-                "baslangic_zamani": st.column_config.DatetimeColumn("Zaman", format="D MMM, HH:mm")
-            },
-            use_container_width=True, hide_index=True
-        )
+        st.dataframe(df_toplanti, use_container_width=True, hide_index=True)
     else:
-        st.info("Planlanmış toplantı yok.")
+        st.info("Toplantı yok.")
 
-# --- TAB 6: DUYURULAR ---
+# TAB 6: Duyurular
 with tab_duyuru:
-    st.subheader("Son Duyurular")
     if not df_duyuru.empty:
-        for index, row in df_duyuru.iterrows():
-            t_str = row['olusturma_tarihi'].strftime('%d-%m-%Y') if pd.notnull(row['olusturma_tarihi']) else "-"
-            with st.expander(f"📢 {row['baslik']} ({t_str})"):
-                st.write(row['icerik'])
+        for i, row in df_duyuru.iterrows():
+            d_tarih = row.get('olusturma_tarihi', row.get('tarih'))
+            d_baslik = row.get('baslik', 'Duyuru')
+            d_icerik = row.get('icerik', '')
+            
+            with st.expander(f"📢 {d_baslik}"):
+                st.write(d_icerik)
+                if pd.notnull(d_tarih): st.caption(f"Tarih: {d_tarih}")
     else:
-        st.info("Henüz duyuru yok.")
+        st.info("Duyuru yok.")
