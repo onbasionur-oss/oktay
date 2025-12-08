@@ -35,7 +35,7 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: bold;
-        z-index: 999999; /* En üstte durması için */
+        z-index: 999999;
         pointer-events: none;
         white-space: nowrap;
         animation: gentle-pulse-glow 3s ease-in-out infinite;
@@ -75,7 +75,7 @@ def run_query(query, params=None):
             cursor.execute(query, params)
             return cursor.fetchall()
     except Exception as e:
-        st.warning(f"Veri okunurken hata/uyarı: {e}")
+        st.warning(f"Veri okunurken hata oluştu: {e}")
         return []
 
 # Veri Güncelleme
@@ -107,34 +107,32 @@ if col2.button("🔄 Verileri Canlı Yenile", type="primary"):
     st.cache_data.clear()
     st.rerun()
 
-# --- VERİLERİ ÇEKME ---
+# --- 1. PERSONEL VERİSİ (HATA DUZELTİLDİ: PYTHON TARAFI İŞLEME) ---
+# SQL'de tarih hatası almamak için WHERE koşulu koymadan son kayıtları çekiyoruz.
+# Filtrelemeyi aşağıda Pandas ile yapacağız.
+raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 200")
+df_personel_tum = pd.DataFrame(raw_personel)
 
-# 1. PERSONEL (HEM AKTİF HEM GEÇMİŞ)
-# Not: Check_out NULL olabilir veya '0000...' olabilir, ikisini de kontrol ediyoruz.
-sql_personel_aktif = """
-    SELECT * FROM zaman_kayitlari 
-    WHERE check_out IS NULL 
-       OR check_out = '' 
-       OR check_out LIKE '0000%'
-"""
-df_personel_aktif = pd.DataFrame(run_query(sql_personel_aktif))
+df_personel_aktif = pd.DataFrame() # Boş dataframe başlat
 
-# Tüm kayıtları da çekelim (Log için)
-sql_personel_tum = "SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 50"
-df_personel_tum = pd.DataFrame(run_query(sql_personel_tum))
-
-# Tarihleri düzelt (Aktif Personel için)
-if not df_personel_aktif.empty:
-    col_in = next((c for c in ['check_in', 'giris_zamani', 'giris'] if c in df_personel_aktif.columns), None)
-    if col_in:
-        df_personel_aktif[col_in] = pd.to_datetime(df_personel_aktif[col_in], errors='coerce') + timedelta(hours=1)
-
-# Tarihleri düzelt (Tüm Liste için)
 if not df_personel_tum.empty:
-    col_in = next((c for c in ['check_in', 'giris'] if c in df_personel_tum.columns), None)
-    col_out = next((c for c in ['check_out', 'cikis'] if c in df_personel_tum.columns), None)
-    if col_in: df_personel_tum[col_in] = pd.to_datetime(df_personel_tum[col_in], errors='coerce')
-    if col_out: df_personel_tum[col_out] = pd.to_datetime(df_personel_tum[col_out], errors='coerce')
+    # Sütun isimlerini güvenli bul
+    c_in = next((c for c in ['check_in', 'giris'] if c in df_personel_tum.columns), None)
+    c_out = next((c for c in ['check_out', 'cikis'] if c in df_personel_tum.columns), None)
+
+    if c_in:
+        # Tarihe çevir, hatalı olanları (0000-00-00 gibi) NaT (Boş) yap
+        df_personel_tum[c_in] = pd.to_datetime(df_personel_tum[c_in], errors='coerce') + timedelta(hours=1)
+    
+    if c_out:
+        # Hata 1525 Çözümü: Veritabanındaki '0000-00-00' veya boş stringler burada NaT'a dönüşür
+        df_personel_tum[c_out] = pd.to_datetime(df_personel_tum[c_out], errors='coerce')
+        
+        # AKTİF FİLTRESİ: Çıkış saati BOŞ (NaT) olanlar içeridedir.
+        df_personel_aktif = df_personel_tum[df_personel_tum[c_out].isna()]
+    else:
+        # Eğer check_out sütunu yoksa hepsi aktiftir (Debug)
+        df_personel_aktif = df_personel_tum
 
 # 2. Görevler
 df_gorevler = pd.DataFrame(run_query("SELECT * FROM gorevler WHERE durum NOT IN ('Tamamlandı', 'Tamamlandi', 'Bitti')"))
@@ -145,7 +143,7 @@ if not df_arizalar.empty:
     t_col = next((c for c in ['bildirim_tarihi', 'tarih'] if c in df_arizalar.columns), None)
     if t_col: df_arizalar[t_col] = pd.to_datetime(df_arizalar[t_col], errors='coerce')
 
-# 4. İzinler & Toplantı
+# 4. Diğerleri
 df_izinler = pd.DataFrame(run_query("SELECT * FROM tatil_talepleri WHERE onay_durumu = 'Beklemede'"))
 df_toplanti = pd.DataFrame(run_query("SELECT * FROM rezervasyonlar WHERE baslangic_zamani >= CURDATE()"))
 df_duyuru = pd.DataFrame(run_query("SELECT * FROM duyurular ORDER BY id DESC LIMIT 5"))
@@ -167,7 +165,7 @@ tab_personel, tab_gorev, tab_ariza, tab_izin, tab_toplanti, tab_duyuru = st.tabs
     "👷‍♂️ Personel Takibi", "📝 Görevler", "🛠️ Arızalar", "✈️ İzinler", "📅 Toplantı", "📢 Duyurular"
 ])
 
-# --- TAB 1: PERSONEL (GELİŞMİŞ GÖRÜNÜM) ---
+# --- TAB 1: PERSONEL (HATASIZ MOD) ---
 with tab_personel:
     col_aktif, col_log = st.columns(2)
     
@@ -176,10 +174,14 @@ with tab_personel:
         st.subheader("🟢 Şu An İçeride Olanlar")
         if not df_personel_aktif.empty:
             isim_col = next((c for c in ['kullanici_adi', 'ad_soyad', 'personel'] if c in df_personel_aktif.columns), df_personel_aktif.columns[0])
-            zaman_col = next((c for c in ['check_in', 'giris'] if c in df_personel_aktif.columns), df_personel_aktif.columns[1])
+            zaman_col = next((c for c in ['check_in', 'giris'] if c in df_personel_aktif.columns), None)
+            
+            # Gösterilecek sütunlar
+            cols = [isim_col]
+            if zaman_col: cols.append(zaman_col)
             
             st.dataframe(
-                df_personel_aktif[[isim_col, zaman_col]], 
+                df_personel_aktif[cols], 
                 column_config={
                     isim_col: "Personel Adı",
                     zaman_col: st.column_config.DatetimeColumn("Giriş Saati", format="HH:mm")
@@ -189,11 +191,10 @@ with tab_personel:
         else:
             st.info("Şu an içeride aktif görünen personel yok.")
 
-    # 2. BÖLÜM: Son Hareketler (Giriş & Çıkış Listesi)
+    # 2. BÖLÜM: Son Hareketler Logu
     with col_log:
-        st.subheader("📋 Son Giriş/Çıkış Hareketleri")
+        st.subheader("📋 Son Hareketler (Tümü)")
         if not df_personel_tum.empty:
-            # Sütunları otomatik bul
             isim_c = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_personel_tum.columns), None)
             giris_c = next((c for c in ['check_in', 'giris'] if c in df_personel_tum.columns), None)
             cikis_c = next((c for c in ['check_out', 'cikis'] if c in df_personel_tum.columns), None)
@@ -210,7 +211,7 @@ with tab_personel:
                 use_container_width=True, hide_index=True
             )
         else:
-            st.warning("Veritabanında hiç kayıt bulunamadı.")
+            st.warning("Kayıt yok.")
 
 # --- TAB 2: GÖREVLER ---
 with tab_gorev:
@@ -231,7 +232,7 @@ with tab_gorev:
                     st.progress(100 if g_durum in ['Tamamlandı', 'Bitti'] else 50 if 'Devam' in g_durum else 10)
                 with c2:
                     yeni_d = st.selectbox("Durum:", ["Beklemede", "Devam Ediyor", "Tamamlandı"], key=f"g_sel_{g_id if g_id else i}")
-                    if st.button("Kaydet", key=f"g_btn_{g_id if g_id else i}"):
+                    if st.button("Kaydet", key=f"g_btn_{g_id if g_id else i}", type="primary"):
                         if g_id:
                             run_update("UPDATE gorevler SET durum=%s WHERE id=%s", (yeni_d, g_id))
                             st.success("Güncellendi!"); time.sleep(0.5); st.rerun()
@@ -247,6 +248,7 @@ with tab_ariza:
             a_baslik = row.get('ariza_baslik', row.get('baslik', 'Arıza'))
             a_kisi = row.get('gonderen_kullanici_adi', '-')
             a_durum = row.get('durum', 'Beklemede')
+            
             t_col = next((c for c in ['bildirim_tarihi', 'tarih'] if c in row.index), None)
             t_str = row[t_col].strftime('%d-%m %H:%M') if t_col and pd.notnull(row[t_col]) else ""
 
@@ -258,7 +260,7 @@ with tab_ariza:
                     if row.get('aciklama'): st.write(f"Detay: {row['aciklama']}")
                 with c2:
                     yeni_a = st.selectbox("Durum:", ["Beklemede", "İşlemde", "Parça Bekleniyor", "Cozuldu"], key=f"a_sel_{a_id if a_id else i}")
-                    if st.button("Kaydet", key=f"a_btn_{a_id if a_id else i}"):
+                    if st.button("Kaydet", key=f"a_btn_{a_id if a_id else i}", type="primary"):
                         if a_id:
                             run_update("UPDATE ariza_bildirimleri SET durum=%s WHERE id=%s", (yeni_a, a_id))
                             st.success("Güncellendi!"); time.sleep(0.5); st.rerun()
