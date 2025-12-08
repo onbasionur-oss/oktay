@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- TASARIM İMZASI (GÖRÜNÜR & EFEKTLİ) ---
+# --- TASARIM İMZASI ---
 st.markdown("""
     <style>
     @keyframes gentle-pulse-glow {
@@ -23,24 +23,15 @@ st.markdown("""
         50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
         100% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
     }
-
     .fixed-design-credit {
-        position: fixed;
-        top: 15px;
-        left: 20px;
+        position: fixed; top: 15px; left: 20px;
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
         font-size: 28px;
         background: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
-        background-size: 200% auto;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: bold;
-        z-index: 999999;
-        pointer-events: none;
-        white-space: nowrap;
-        animation: gentle-pulse-glow 3s ease-in-out infinite;
+        background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        font-weight: bold; z-index: 999999; pointer-events: none;
+        white-space: nowrap; animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
-    
     .stButton button { width: 100%; border-radius: 8px; font-weight: bold; }
     </style>
     <div class="fixed-design-credit">Design by Oktay</div>
@@ -65,7 +56,6 @@ def get_connection():
         st.error(f"⚠️ Veritabanı Bağlantı Hatası: {e}")
         return None
 
-# Veri Okuma
 def run_query(query, params=None):
     conn = get_connection()
     if not conn: return []
@@ -75,10 +65,9 @@ def run_query(query, params=None):
             cursor.execute(query, params)
             return cursor.fetchall()
     except Exception as e:
-        st.warning(f"Veri okunurken hata oluştu: {e}")
+        st.warning(f"Veri okunurken hata: {e}")
         return []
 
-# Veri Güncelleme
 def run_update(query, params=None):
     conn = get_connection()
     if not conn: return False
@@ -93,12 +82,9 @@ def run_update(query, params=None):
         return False
 
 # ---------------------------------------------------------
-# 3. VERİ HAZIRLIĞI
+# 3. VERİ HAZIRLIĞI VE ÖZEL AYRIŞTIRMA
 # ---------------------------------------------------------
-
 st.title("🚨 Merkez Genel Durum Raporu")
-
-# Danimarka Saati
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
 
 col1, col2 = st.columns([3, 1])
@@ -107,32 +93,37 @@ if col2.button("🔄 Verileri Canlı Yenile", type="primary"):
     st.cache_data.clear()
     st.rerun()
 
-# --- 1. PERSONEL VERİSİ (HATA DUZELTİLDİ: PYTHON TARAFI İŞLEME) ---
-# SQL'de tarih hatası almamak için WHERE koşulu koymadan son kayıtları çekiyoruz.
-# Filtrelemeyi aşağıda Pandas ile yapacağız.
-raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 200")
-df_personel_tum = pd.DataFrame(raw_personel)
+# --- 1. PERSONEL VERİSİ (HEPSİNİ ÇEKİP PYTHON'DA AYIKLIYORUZ) ---
+# SQL filtresi kullanmıyoruz, çünkü 1525 hatasına veya gözden kaçmaya sebep oluyor.
+raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 100")
+df_tum_hareketler = pd.DataFrame(raw_personel)
 
-df_personel_aktif = pd.DataFrame() # Boş dataframe başlat
+df_aktif_personel = pd.DataFrame()
 
-if not df_personel_tum.empty:
-    # Sütun isimlerini güvenli bul
-    c_in = next((c for c in ['check_in', 'giris'] if c in df_personel_tum.columns), None)
-    c_out = next((c for c in ['check_out', 'cikis'] if c in df_personel_tum.columns), None)
+if not df_tum_hareketler.empty:
+    # Sütun isimlerini tahmin et
+    col_giris = next((c for c in ['check_in', 'giris', 'giris_zamani'] if c in df_tum_hareketler.columns), None)
+    col_cikis = next((c for c in ['check_out', 'cikis', 'cikis_zamani'] if c in df_tum_hareketler.columns), None)
 
-    if c_in:
-        # Tarihe çevir, hatalı olanları (0000-00-00 gibi) NaT (Boş) yap
-        df_personel_tum[c_in] = pd.to_datetime(df_personel_tum[c_in], errors='coerce') + timedelta(hours=1)
-    
-    if c_out:
-        # Hata 1525 Çözümü: Veritabanındaki '0000-00-00' veya boş stringler burada NaT'a dönüşür
-        df_personel_tum[c_out] = pd.to_datetime(df_personel_tum[c_out], errors='coerce')
+    # Giriş saatlerini düzelt
+    if col_giris:
+        df_tum_hareketler[col_giris] = pd.to_datetime(df_tum_hareketler[col_giris], errors='coerce') + timedelta(hours=1)
+
+    # --- KİM İÇERİDE? (MANTIKSAL FİLTRELEME) ---
+    if col_cikis:
+        # 1. Çıkış verisini tarihe çevirmeyi dene, hata verenleri (0000-00-00, boşluk vb.) NaT yap
+        df_tum_hareketler['temp_cikis'] = pd.to_datetime(df_tum_hareketler[col_cikis], errors='coerce')
         
-        # AKTİF FİLTRESİ: Çıkış saati BOŞ (NaT) olanlar içeridedir.
-        df_personel_aktif = df_personel_tum[df_personel_tum[c_out].isna()]
+        # 2. Şartlar:
+        # - Çıkış tarihi NaT (Geçersiz/Boş) ise
+        # - VEYA Çıkış tarihi veritabanından NULL geldiyse
+        # - VEYA Çıkış tarihi '0000-00-00' gibi string ise
+        # İÇERİDE KABUL ET
+        mask_iceride = df_tum_hareketler['temp_cikis'].isna() 
+        df_aktif_personel = df_tum_hareketler[mask_iceride].copy()
     else:
-        # Eğer check_out sütunu yoksa hepsi aktiftir (Debug)
-        df_personel_aktif = df_personel_tum
+        # Eğer çıkış sütunu bulunamadıysa hepsi listede gözüksün (Debug için)
+        df_aktif_personel = df_tum_hareketler.copy()
 
 # 2. Görevler
 df_gorevler = pd.DataFrame(run_query("SELECT * FROM gorevler WHERE durum NOT IN ('Tamamlandı', 'Tamamlandi', 'Bitti')"))
@@ -150,7 +141,7 @@ df_duyuru = pd.DataFrame(run_query("SELECT * FROM duyurular ORDER BY id DESC LIM
 
 # KPI
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("👥 Aktif Personel", len(df_personel_aktif))
+k1.metric("👥 Aktif Personel", len(df_aktif_personel))
 k2.metric("📋 Açık Görev", len(df_gorevler))
 k3.metric("🚨 Arızalar", len(df_arizalar), delta_color="inverse")
 k4.metric("✈️ İzinler", len(df_izinler))
@@ -165,53 +156,61 @@ tab_personel, tab_gorev, tab_ariza, tab_izin, tab_toplanti, tab_duyuru = st.tabs
     "👷‍♂️ Personel Takibi", "📝 Görevler", "🛠️ Arızalar", "✈️ İzinler", "📅 Toplantı", "📢 Duyurular"
 ])
 
-# --- TAB 1: PERSONEL (HATASIZ MOD) ---
+# --- TAB 1: PERSONEL (GELİŞMİŞ) ---
 with tab_personel:
-    col_aktif, col_log = st.columns(2)
+    col_sol, col_sag = st.columns(2)
     
-    # 1. BÖLÜM: Sadece İçeride Olanlar
-    with col_aktif:
+    # SOL: Aktif Olanlar
+    with col_sol:
         st.subheader("🟢 Şu An İçeride Olanlar")
-        if not df_personel_aktif.empty:
-            isim_col = next((c for c in ['kullanici_adi', 'ad_soyad', 'personel'] if c in df_personel_aktif.columns), df_personel_aktif.columns[0])
-            zaman_col = next((c for c in ['check_in', 'giris'] if c in df_personel_aktif.columns), None)
+        if not df_aktif_personel.empty:
+            ad_col = next((c for c in ['kullanici_adi', 'ad_soyad', 'personel'] if c in df_aktif_personel.columns), df_aktif_personel.columns[0])
+            giris_col = next((c for c in ['check_in', 'giris', 'giris_zamani'] if c in df_aktif_personel.columns), None)
             
-            # Gösterilecek sütunlar
-            cols = [isim_col]
-            if zaman_col: cols.append(zaman_col)
+            gosterilecek = [ad_col]
+            if giris_col: gosterilecek.append(giris_col)
             
             st.dataframe(
-                df_personel_aktif[cols], 
+                df_aktif_personel[gosterilecek],
                 column_config={
-                    isim_col: "Personel Adı",
-                    zaman_col: st.column_config.DatetimeColumn("Giriş Saati", format="HH:mm")
+                    ad_col: "Personel Adı",
+                    giris_col: st.column_config.DatetimeColumn("Giriş Saati", format="HH:mm")
                 },
                 use_container_width=True, hide_index=True
             )
         else:
-            st.info("Şu an içeride aktif görünen personel yok.")
+            st.info("Kimse içeride görünmüyor.")
 
-    # 2. BÖLÜM: Son Hareketler Logu
-    with col_log:
-        st.subheader("📋 Son Hareketler (Tümü)")
-        if not df_personel_tum.empty:
-            isim_c = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_personel_tum.columns), None)
-            giris_c = next((c for c in ['check_in', 'giris'] if c in df_personel_tum.columns), None)
-            cikis_c = next((c for c in ['check_out', 'cikis'] if c in df_personel_tum.columns), None)
+    # SAĞ: Tüm Hareketler (Kontrol Amaçlı)
+    with col_sag:
+        st.subheader("📋 Son Giriş/Çıkış Hareketleri")
+        if not df_tum_hareketler.empty:
+            ad_c = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_tum_hareketler.columns), None)
+            g_c = next((c for c in ['check_in', 'giris'] if c in df_tum_hareketler.columns), None)
+            c_c = next((c for c in ['check_out', 'cikis'] if c in df_tum_hareketler.columns), None)
             
-            cols_to_show = [c for c in [isim_c, giris_c, cikis_c] if c is not None]
+            cols_log = [c for c in [ad_c, g_c, c_c] if c]
             
             st.dataframe(
-                df_personel_tum[cols_to_show],
+                df_tum_hareketler[cols_log],
                 column_config={
-                    isim_c: "Personel",
-                    giris_c: st.column_config.DatetimeColumn("Giriş", format="DD/MM HH:mm"),
-                    cikis_c: st.column_config.DatetimeColumn("Çıkış", format="DD/MM HH:mm")
+                    ad_c: "Personel",
+                    g_c: st.column_config.DatetimeColumn("Giriş", format="DD/MM HH:mm"),
+                    c_c: st.column_config.TextColumn("Çıkış (Ham Veri)") # Hata ayıklama için text bıraktık
                 },
                 use_container_width=True, hide_index=True
             )
         else:
-            st.warning("Kayıt yok.")
+            st.warning("Veri yok.")
+
+    # DEBUG KUTUSU (Eğer hala görünmüyorsa buraya bakın)
+    with st.expander("🛠️ Yönetici Paneli: Veritabanı Röntgeni (Ham Veriler)"):
+        st.write("Veritabanından çekilen ilk 5 satırın ham hali:")
+        if not df_tum_hareketler.empty:
+            st.write(df_tum_hareketler.head())
+            st.write("Sütun İsimleri:", list(df_tum_hareketler.columns))
+        else:
+            st.error("Tablodan veri çekilemedi.")
 
 # --- TAB 2: GÖREVLER ---
 with tab_gorev:
@@ -232,7 +231,7 @@ with tab_gorev:
                     st.progress(100 if g_durum in ['Tamamlandı', 'Bitti'] else 50 if 'Devam' in g_durum else 10)
                 with c2:
                     yeni_d = st.selectbox("Durum:", ["Beklemede", "Devam Ediyor", "Tamamlandı"], key=f"g_sel_{g_id if g_id else i}")
-                    if st.button("Kaydet", key=f"g_btn_{g_id if g_id else i}", type="primary"):
+                    if st.button("Kaydet", key=f"g_btn_{g_id if g_id else i}"):
                         if g_id:
                             run_update("UPDATE gorevler SET durum=%s WHERE id=%s", (yeni_d, g_id))
                             st.success("Güncellendi!"); time.sleep(0.5); st.rerun()
@@ -248,7 +247,6 @@ with tab_ariza:
             a_baslik = row.get('ariza_baslik', row.get('baslik', 'Arıza'))
             a_kisi = row.get('gonderen_kullanici_adi', '-')
             a_durum = row.get('durum', 'Beklemede')
-            
             t_col = next((c for c in ['bildirim_tarihi', 'tarih'] if c in row.index), None)
             t_str = row[t_col].strftime('%d-%m %H:%M') if t_col and pd.notnull(row[t_col]) else ""
 
