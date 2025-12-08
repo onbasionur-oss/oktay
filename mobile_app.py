@@ -65,7 +65,6 @@ def run_query(query, params=None):
             cursor.execute(query, params)
             return cursor.fetchall()
     except Exception as e:
-        # Hata mesajını kullanıcıya yansıtma (Temiz görünüm)
         return []
 
 def run_update(query, params=None):
@@ -93,28 +92,34 @@ if col2.button("🔄 Verileri Canlı Yenile", type="primary"):
     st.cache_data.clear()
     st.rerun()
 
-# --- 1. PERSONEL VERİSİ ---
-# Hata almamak için tüm veriyi çekip Python ile ayıklıyoruz
-raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 100")
+# --- 1. PERSONEL VERİSİ (GARANTİ YÖNTEM) ---
+# Limiti artırdık (500) ki aktif olanlar listenin sonunda kalmasın
+raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 500")
 df_tum_hareketler = pd.DataFrame(raw_personel)
 df_aktif_personel = pd.DataFrame()
 
 if not df_tum_hareketler.empty:
-    # Sütun isimlerini güvenli şekilde bul
+    # Sütun isimlerini bul
     col_giris = next((c for c in ['check_in', 'giris', 'giris_zamani'] if c in df_tum_hareketler.columns), None)
     col_cikis = next((c for c in ['check_out', 'cikis', 'cikis_zamani'] if c in df_tum_hareketler.columns), None)
 
-    # 1. Giriş saatlerini formatla (+1 saat eklendi)
+    # Giriş Saatlerini Formatla (+1 Saat Ekle)
     if col_giris:
         df_tum_hareketler[col_giris] = pd.to_datetime(df_tum_hareketler[col_giris], errors='coerce') + timedelta(hours=1)
 
-    # 2. Çıkış saatlerini formatla
+    # --- KİM İÇERİDE? (MANTIKSAL FİLTRELEME) ---
     if col_cikis:
-        df_tum_hareketler[col_cikis] = pd.to_datetime(df_tum_hareketler[col_cikis], errors='coerce') + timedelta(hours=1)
+        # Geçici bir sütun oluşturup tarih mi değil mi kontrol ediyoruz
+        # errors='coerce' sayesinde '0000-00-00', boşluk veya NULL olanlar NaT (Yok) olur.
+        temp_cikis_series = pd.to_datetime(df_tum_hareketler[col_cikis], errors='coerce')
         
-        # AKTİF FİLTRESİ: Çıkış saati (NaT/Boş) olanlar içeridedir
-        df_aktif_personel = df_tum_hareketler[df_tum_hareketler[col_cikis].isna()].copy()
+        # Çıkış saati formatla (Görsel Liste İçin)
+        df_tum_hareketler[col_cikis] = temp_cikis_series + timedelta(hours=1)
+        
+        # AKTİF FİLTRESİ: Dönüştürüldüğünde "NaT" (Tarih Yok) kalanlar hala içeridedir.
+        df_aktif_personel = df_tum_hareketler[temp_cikis_series.isna()].copy()
     else:
+        # Çıkış sütunu hiç yoksa hepsi içeride varsayılır
         df_aktif_personel = df_tum_hareketler.copy()
 
 # 2. Görevler
@@ -126,7 +131,7 @@ if not df_arizalar.empty:
     t_col = next((c for c in ['bildirim_tarihi', 'tarih'] if c in df_arizalar.columns), None)
     if t_col: df_arizalar[t_col] = pd.to_datetime(df_arizalar[t_col], errors='coerce')
 
-# 4. Diğer Veriler
+# 4. Diğerleri
 df_izinler = pd.DataFrame(run_query("SELECT * FROM tatil_talepleri WHERE onay_durumu = 'Beklemede'"))
 df_toplanti = pd.DataFrame(run_query("SELECT * FROM rezervasyonlar WHERE baslangic_zamani >= CURDATE()"))
 df_duyuru = pd.DataFrame(run_query("SELECT * FROM duyurular ORDER BY id DESC LIMIT 5"))
@@ -152,18 +157,18 @@ tab_personel, tab_gorev, tab_ariza, tab_izin, tab_toplanti, tab_duyuru = st.tabs
 with tab_personel:
     col_sol, col_sag = st.columns(2)
     
-    # SOL: Aktif Olanlar (Sadece giriş saati olur)
+    # SOL: Aktif Olanlar (Sadece Girenler)
     with col_sol:
         st.subheader("🟢 Şu An İçeride Olanlar")
         if not df_aktif_personel.empty:
             ad_col = next((c for c in ['kullanici_adi', 'ad_soyad', 'personel'] if c in df_aktif_personel.columns), df_aktif_personel.columns[0])
             giris_col = next((c for c in ['check_in', 'giris'] if c in df_aktif_personel.columns), None)
             
-            cols_aktif = [ad_col]
-            if giris_col: cols_aktif.append(giris_col)
+            cols_show = [ad_col]
+            if giris_col: cols_show.append(giris_col)
             
             st.dataframe(
-                df_aktif_personel[cols_aktif],
+                df_aktif_personel[cols_show],
                 column_config={
                     ad_col: "Personel Adı",
                     giris_col: st.column_config.DatetimeColumn("Giriş Saati", format="HH:mm")
@@ -173,7 +178,7 @@ with tab_personel:
         else:
             st.info("Kimse içeride görünmüyor.")
 
-    # SAĞ: Tüm Hareketler (Giriş ve Çıkış Saatleri)
+    # SAĞ: Tüm Hareketler (Giriş ve Çıkış Saatleri ile)
     with col_sag:
         st.subheader("📋 Son Giriş/Çıkış Hareketleri")
         if not df_tum_hareketler.empty:
@@ -189,7 +194,7 @@ with tab_personel:
                 column_config={
                     ad_c: "Personel",
                     g_c: st.column_config.DatetimeColumn("Giriş", format="DD/MM HH:mm"),
-                    c_c: st.column_config.DatetimeColumn("Çıkış Saati", format="DD/MM HH:mm") # Düzeltildi
+                    c_c: st.column_config.DatetimeColumn("Çıkış Saati", format="DD/MM HH:mm")
                 },
                 use_container_width=True, hide_index=True
             )
@@ -215,7 +220,7 @@ with tab_gorev:
                     st.progress(100 if g_durum in ['Tamamlandı', 'Bitti'] else 50 if 'Devam' in g_durum else 10)
                 with c2:
                     yeni_d = st.selectbox("Durum:", ["Beklemede", "Devam Ediyor", "Tamamlandı"], key=f"g_sel_{g_id if g_id else i}")
-                    if st.button("Kaydet", key=f"g_btn_{g_id if g_id else i}"):
+                    if st.button("Kaydet", key=f"g_btn_{g_id if g_id else i}", type="primary"):
                         if g_id:
                             run_update("UPDATE gorevler SET durum=%s WHERE id=%s", (yeni_d, g_id))
                             st.success("Güncellendi!"); time.sleep(0.5); st.rerun()
