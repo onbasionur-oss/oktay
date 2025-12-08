@@ -65,7 +65,7 @@ def run_query(query, params=None):
             cursor.execute(query, params)
             return cursor.fetchall()
     except Exception as e:
-        st.warning(f"Veri okunurken hata: {e}")
+        # Hata mesajını kullanıcıya yansıtma (Temiz görünüm)
         return []
 
 def run_update(query, params=None):
@@ -82,7 +82,7 @@ def run_update(query, params=None):
         return False
 
 # ---------------------------------------------------------
-# 3. VERİ HAZIRLIĞI VE ÖZEL AYRIŞTIRMA
+# 3. VERİ HAZIRLIĞI
 # ---------------------------------------------------------
 st.title("🚨 Merkez Genel Durum Raporu")
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
@@ -93,36 +93,28 @@ if col2.button("🔄 Verileri Canlı Yenile", type="primary"):
     st.cache_data.clear()
     st.rerun()
 
-# --- 1. PERSONEL VERİSİ (HEPSİNİ ÇEKİP PYTHON'DA AYIKLIYORUZ) ---
-# SQL filtresi kullanmıyoruz, çünkü 1525 hatasına veya gözden kaçmaya sebep oluyor.
+# --- 1. PERSONEL VERİSİ ---
+# Hata almamak için tüm veriyi çekip Python ile ayıklıyoruz
 raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 100")
 df_tum_hareketler = pd.DataFrame(raw_personel)
-
 df_aktif_personel = pd.DataFrame()
 
 if not df_tum_hareketler.empty:
-    # Sütun isimlerini tahmin et
+    # Sütun isimlerini güvenli şekilde bul
     col_giris = next((c for c in ['check_in', 'giris', 'giris_zamani'] if c in df_tum_hareketler.columns), None)
     col_cikis = next((c for c in ['check_out', 'cikis', 'cikis_zamani'] if c in df_tum_hareketler.columns), None)
 
-    # Giriş saatlerini düzelt
+    # 1. Giriş saatlerini formatla (+1 saat eklendi)
     if col_giris:
         df_tum_hareketler[col_giris] = pd.to_datetime(df_tum_hareketler[col_giris], errors='coerce') + timedelta(hours=1)
 
-    # --- KİM İÇERİDE? (MANTIKSAL FİLTRELEME) ---
+    # 2. Çıkış saatlerini formatla
     if col_cikis:
-        # 1. Çıkış verisini tarihe çevirmeyi dene, hata verenleri (0000-00-00, boşluk vb.) NaT yap
-        df_tum_hareketler['temp_cikis'] = pd.to_datetime(df_tum_hareketler[col_cikis], errors='coerce')
+        df_tum_hareketler[col_cikis] = pd.to_datetime(df_tum_hareketler[col_cikis], errors='coerce') + timedelta(hours=1)
         
-        # 2. Şartlar:
-        # - Çıkış tarihi NaT (Geçersiz/Boş) ise
-        # - VEYA Çıkış tarihi veritabanından NULL geldiyse
-        # - VEYA Çıkış tarihi '0000-00-00' gibi string ise
-        # İÇERİDE KABUL ET
-        mask_iceride = df_tum_hareketler['temp_cikis'].isna() 
-        df_aktif_personel = df_tum_hareketler[mask_iceride].copy()
+        # AKTİF FİLTRESİ: Çıkış saati (NaT/Boş) olanlar içeridedir
+        df_aktif_personel = df_tum_hareketler[df_tum_hareketler[col_cikis].isna()].copy()
     else:
-        # Eğer çıkış sütunu bulunamadıysa hepsi listede gözüksün (Debug için)
         df_aktif_personel = df_tum_hareketler.copy()
 
 # 2. Görevler
@@ -134,7 +126,7 @@ if not df_arizalar.empty:
     t_col = next((c for c in ['bildirim_tarihi', 'tarih'] if c in df_arizalar.columns), None)
     if t_col: df_arizalar[t_col] = pd.to_datetime(df_arizalar[t_col], errors='coerce')
 
-# 4. Diğerleri
+# 4. Diğer Veriler
 df_izinler = pd.DataFrame(run_query("SELECT * FROM tatil_talepleri WHERE onay_durumu = 'Beklemede'"))
 df_toplanti = pd.DataFrame(run_query("SELECT * FROM rezervasyonlar WHERE baslangic_zamani >= CURDATE()"))
 df_duyuru = pd.DataFrame(run_query("SELECT * FROM duyurular ORDER BY id DESC LIMIT 5"))
@@ -156,22 +148,22 @@ tab_personel, tab_gorev, tab_ariza, tab_izin, tab_toplanti, tab_duyuru = st.tabs
     "👷‍♂️ Personel Takibi", "📝 Görevler", "🛠️ Arızalar", "✈️ İzinler", "📅 Toplantı", "📢 Duyurular"
 ])
 
-# --- TAB 1: PERSONEL (GELİŞMİŞ) ---
+# --- TAB 1: PERSONEL ---
 with tab_personel:
     col_sol, col_sag = st.columns(2)
     
-    # SOL: Aktif Olanlar
+    # SOL: Aktif Olanlar (Sadece giriş saati olur)
     with col_sol:
         st.subheader("🟢 Şu An İçeride Olanlar")
         if not df_aktif_personel.empty:
             ad_col = next((c for c in ['kullanici_adi', 'ad_soyad', 'personel'] if c in df_aktif_personel.columns), df_aktif_personel.columns[0])
-            giris_col = next((c for c in ['check_in', 'giris', 'giris_zamani'] if c in df_aktif_personel.columns), None)
+            giris_col = next((c for c in ['check_in', 'giris'] if c in df_aktif_personel.columns), None)
             
-            gosterilecek = [ad_col]
-            if giris_col: gosterilecek.append(giris_col)
+            cols_aktif = [ad_col]
+            if giris_col: cols_aktif.append(giris_col)
             
             st.dataframe(
-                df_aktif_personel[gosterilecek],
+                df_aktif_personel[cols_aktif],
                 column_config={
                     ad_col: "Personel Adı",
                     giris_col: st.column_config.DatetimeColumn("Giriş Saati", format="HH:mm")
@@ -181,7 +173,7 @@ with tab_personel:
         else:
             st.info("Kimse içeride görünmüyor.")
 
-    # SAĞ: Tüm Hareketler (Kontrol Amaçlı)
+    # SAĞ: Tüm Hareketler (Giriş ve Çıkış Saatleri)
     with col_sag:
         st.subheader("📋 Son Giriş/Çıkış Hareketleri")
         if not df_tum_hareketler.empty:
@@ -189,6 +181,7 @@ with tab_personel:
             g_c = next((c for c in ['check_in', 'giris'] if c in df_tum_hareketler.columns), None)
             c_c = next((c for c in ['check_out', 'cikis'] if c in df_tum_hareketler.columns), None)
             
+            # Sütunları seç
             cols_log = [c for c in [ad_c, g_c, c_c] if c]
             
             st.dataframe(
@@ -196,21 +189,12 @@ with tab_personel:
                 column_config={
                     ad_c: "Personel",
                     g_c: st.column_config.DatetimeColumn("Giriş", format="DD/MM HH:mm"),
-                    c_c: st.column_config.TextColumn("Çıkış (Ham Veri)") # Hata ayıklama için text bıraktık
+                    c_c: st.column_config.DatetimeColumn("Çıkış Saati", format="DD/MM HH:mm") # Düzeltildi
                 },
                 use_container_width=True, hide_index=True
             )
         else:
             st.warning("Veri yok.")
-
-    # DEBUG KUTUSU (Eğer hala görünmüyorsa buraya bakın)
-    with st.expander("🛠️ Yönetici Paneli: Veritabanı Röntgeni (Ham Veriler)"):
-        st.write("Veritabanından çekilen ilk 5 satırın ham hali:")
-        if not df_tum_hareketler.empty:
-            st.write(df_tum_hareketler.head())
-            st.write("Sütun İsimleri:", list(df_tum_hareketler.columns))
-        else:
-            st.error("Tablodan veri çekilemedi.")
 
 # --- TAB 2: GÖREVLER ---
 with tab_gorev:
@@ -247,6 +231,7 @@ with tab_ariza:
             a_baslik = row.get('ariza_baslik', row.get('baslik', 'Arıza'))
             a_kisi = row.get('gonderen_kullanici_adi', '-')
             a_durum = row.get('durum', 'Beklemede')
+            
             t_col = next((c for c in ['bildirim_tarihi', 'tarih'] if c in row.index), None)
             t_str = row[t_col].strftime('%d-%m %H:%M') if t_col and pd.notnull(row[t_col]) else ""
 
