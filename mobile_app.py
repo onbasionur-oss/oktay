@@ -16,33 +16,39 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. GÜÇLÜ GİZLEME KODLARI (AGRESİF MOD)
+# 2. KESİN GİZLEME KODLARI (ATOMİK CSS)
 # ---------------------------------------------------------
 st.markdown("""
     <style>
-    /* --- STREAMLIT ARAYÜZÜNÜ TEMİZLEME --- */
+    /* --- 1. TÜM EXTRA BUTONLARI VE MENÜLERİ YOK ET --- */
     
-    /* 1. Üst Menü ve Header */
-    header {visibility: hidden !important;}
-    #MainMenu {visibility: hidden !important;}
-    [data-testid="stHeader"] {visibility: hidden !important;}
+    /* Üstteki her şeyi gizle (Header, Hamburger Menü, Renkli Çizgi) */
+    header {visibility: hidden !important; height: 0px !important;}
+    [data-testid="stHeader"] {visibility: hidden !important; height: 0px !important;}
+    #MainMenu {visibility: hidden !important; display: none !important;}
     
-    /* 2. Alt Footer ve 'Made with Streamlit' */
-    footer {visibility: hidden !important; height: 0px !important;}
+    /* Sağ üstteki Toolbar (Deploy, vs.) */
+    [data-testid="stToolbar"] {visibility: hidden !important; display: none !important;}
+    
+    /* Alt Footer (Made with Streamlit) */
+    footer {visibility: hidden !important; display: none !important; height: 0px !important;}
     .stFooter {display: none !important;}
     
-    /* 3. Sağ Alttaki ve Üstteki Butonlar (Manage App, Deploy vs) */
-    .stDeployButton {display: none !important;}
-    [data-testid="stToolbar"] {visibility: hidden !important;}
-    [data-testid="stStatusWidget"] {visibility: hidden !important;}
-    div[class*="viewerBadge"] {display: none !important;}
+    /* Sağ Alttaki "Manage App" butonu (Streamlit Cloud'da çıkar) */
+    .stAppDeployButton {display: none !important;}
+    [data-testid="stStatusWidget"] {display: none !important;}
     
-    /* Sayfanın üstündeki boşluğu kaldır (Header gidince oluşan boşluk) */
+    /* Viewer Badge (Sağ alttaki gri yazılar) */
+    div[class^='viewerBadge'] {display: none !important;}
+    
+    /* --- 2. SAYFA DÜZENİNİ DÜZELT --- */
+    /* Header gidince yukarıda boşluk kalmasın */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 0rem !important;
+        margin-top: 1rem !important;
     }
 
-    /* --- TASARIM İMZASI --- */
+    /* --- 3. TASARIM İMZASI --- */
     @keyframes gentle-pulse-glow {
         0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
         50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
@@ -50,13 +56,20 @@ st.markdown("""
     }
     
     .fixed-design-credit {
-        position: fixed; top: 10px; left: 20px;
+        position: fixed; 
+        top: 10px; 
+        left: 20px;
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
         font-size: 26px;
         background: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
-        background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        font-weight: bold; z-index: 999999; pointer-events: none;
-        white-space: nowrap; animation: gentle-pulse-glow 3s ease-in-out infinite;
+        background-size: 200% auto; 
+        -webkit-background-clip: text; 
+        -webkit-text-fill-color: transparent;
+        font-weight: bold; 
+        z-index: 9999999 !important; /* En üstte olsun */
+        pointer-events: none;
+        white-space: nowrap; 
+        animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
     
     .stButton button { width: 100%; border-radius: 8px; font-weight: bold; }
@@ -66,7 +79,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 3. VERİTABANI BAĞLANTISI
+# 3. VERİTABANI BAĞLANTISI (ANLIK GÜNCELLEME)
 # ---------------------------------------------------------
 @st.cache_resource(ttl=0)
 def get_connection():
@@ -109,6 +122,8 @@ def run_update(query, params=None):
 # ---------------------------------------------------------
 # 4. VERİ HAZIRLIĞI & OTO YENİLEME
 # ---------------------------------------------------------
+# Sayfa başlığı için boşluk bırak (imza ile çakışmasın)
+st.write("") 
 st.title("🏢 Merkez Genel Durum Raporu")
 
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
