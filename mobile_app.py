@@ -264,7 +264,7 @@ with tab_ariza:
                             run_update("UPDATE ariza_bildirimleri SET durum=%s WHERE id=%s", (yeni_a, a_id))
                             st.success("Güncellendi!"); time.sleep(0.5); st.rerun()
     else:
-        st.success("Aktif arıza yok.😊")
+        st.success("Aktif arıza yok.")
 
 # --- DİĞER SEKMELER ---
 with tab_izin:
