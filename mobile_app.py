@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. SABİTLEME VE GİZLEME KODLARI (FİNAL)
+# 2. SABİT ÜST BAR VE GİZLEME AYARLARI
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -27,17 +27,19 @@ st.markdown("""
     [data-testid="stDataFrame"] { background-color: #262730 !important; }
     div[data-baseweb="select"] > div { background-color: #262730 !important; color: white !important; }
 
-    /* --- 2. GİZLEME KODLARI (MENÜLER YOK) --- */
-    header, footer, #MainMenu, [data-testid="stHeader"], .stFooter { display: none !important; }
+    /* --- 2. GİZLEME KODLARI (TÜMÜNÜ YOK ET) --- */
+    header, footer, #MainMenu, [data-testid="stHeader"], .stFooter { display: none !important; visibility: hidden !important; height: 0 !important; }
     [data-testid="stToolbar"], .stAppDeployButton, [data-testid="stStatusWidget"], div[class*="viewerBadge"] { display: none !important; }
 
-    /* --- 3. İÇERİĞİ AŞAĞI İTME (Başlık imzanın altında kalmasın) --- */
+    /* --- 3. SAYFA DÜZENİ (İÇERİĞİ AŞAĞI İTME) --- */
     .block-container {
-        padding-top: 3rem !important; /* Başlığı aşağı indiriyoruz */
+        /* Üst barın yüksekliği kadar boşluk bırakıyoruz */
+        /* Böylece ilk açılışta başlık barın altında kalmaz */
+        padding-top: 5rem !important; 
         padding-bottom: 1rem !important;
     }
 
-    /* --- 4. TASARIM İMZASI (KESİN SABİTLEME) --- */
+    /* --- 4. TASARIM İMZASI (SABİT ÜST BAR ŞEKLİNDE) --- */
     @keyframes gentle-pulse-glow {
         0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
         50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
@@ -45,29 +47,40 @@ st.markdown("""
     }
     
     .fixed-design-credit {
-        /* FIXED: Ekrana çiviler. Kaydırınca hareket etmez. */
+        /* KONUMLANDIRMA: Ekrana çivile */
         position: fixed; 
         top: 0; 
         left: 0;
         
-        /* Genişlik ve Arka Plan: Yazılar arkadan geçerken karışmasın diye */
+        /* BOYUTLANDIRMA: Ekranı tam kapla */
         width: 100%;
-        padding: 10px 20px;
-        background: linear-gradient(to bottom, #0E1117 80%, transparent 100%); /* Üst tarafı kapatan maske */
+        height: 60px; /* Şeridin yüksekliği */
         
+        /* GÖRÜNÜM: Arka planı koyu yap (Alttan geçen yazıları kapatır) */
+        background-color: #0E1117; 
+        border-bottom: 2px solid #262730; /* Altına şık bir çizgi */
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3); /* Hafif gölge */
+        
+        /* İÇERİK HİZALAMA */
+        display: flex;
+        align-items: center; /* Dikey ortala */
+        padding-left: 20px; /* Soldan boşluk */
+        
+        /* FONT AYARLARI */
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
-        font-size: 26px;
+        font-size: 28px;
         
-        /* Renk Efekti */
+        /* Renk Gradyanı */
         background-image: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
         background-size: 200% auto; 
         -webkit-background-clip: text; 
         -webkit-text-fill-color: transparent;
-        
         font-weight: bold; 
-        z-index: 999999999; /* Her şeyin üstünde */
-        pointer-events: none; /* Tıklamayı engelleme */
         
+        /* KATMAN SIRASI: En üstte */
+        z-index: 999999999;
+        
+        /* Animasyon */
         animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
     
@@ -122,10 +135,6 @@ def run_update(query, params=None):
 # ---------------------------------------------------------
 # 4. VERİ HAZIRLIĞI & OTO YENİLEME
 # ---------------------------------------------------------
-# Başlığı biraz daha aşağıdan başlatmak için boşluk
-st.write("") 
-st.write("") 
-
 st.title("🏢 Merkez Genel Durum Raporu")
 
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
