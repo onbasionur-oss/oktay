@@ -137,7 +137,7 @@ def run_update(query, params=None):
         return False
 
 
-st.title("🏢 Merkez Genel Durum Raporu 📢")
+st.title("🏢 Merkez Genel Durum Raporu   📢")
 
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
 
