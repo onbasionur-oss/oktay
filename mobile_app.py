@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. KESİN GİZLEME VE TASARIM KODLARI (DÜZELTİLDİ)
+# 2. SABİT İMZA VE GİZLEME AYARLARI
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -27,18 +27,19 @@ st.markdown("""
     [data-testid="stDataFrame"] { background-color: #262730 !important; }
     div[data-baseweb="select"] > div { background-color: #262730 !important; color: white !important; }
 
-    /* --- 2. GİZLEME KODLARI (TÜMÜNÜ YOK ET) --- */
+    /* --- 2. GİZLEME KODLARI (MENÜLER YOK) --- */
     header, footer, #MainMenu, [data-testid="stHeader"], .stFooter { display: none !important; visibility: hidden !important; height: 0 !important; }
     [data-testid="stToolbar"], .stAppDeployButton, [data-testid="stStatusWidget"], div[class*="viewerBadge"] { display: none !important; }
 
-    /* --- 3. SAYFA DÜZENİ (İmza için yer aç) --- */
+    /* --- 3. SAYFA DÜZENİ (İÇERİĞİ AŞAĞI İTME) --- */
     .block-container {
-        /* İçeriği aşağı itiyoruz ki imza ile çakışmasın */
-        padding-top: 2.5rem !important; 
-        padding-bottom: 0rem !important;
+        /* Yazı sabit olduğu için içeriği 4.5rem aşağıdan başlatıyoruz */
+        /* Böylece yazı içeriğin üstüne binmez */
+        padding-top: 4.5rem !important; 
+        padding-bottom: 1rem !important;
     }
 
-    /* --- 4. TASARIM İMZASI (Konumu düzeltildi) --- */
+    /* --- 4. TASARIM İMZASI (SABİT - FIXED) --- */
     @keyframes gentle-pulse-glow {
         0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
         50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
@@ -46,16 +47,20 @@ st.markdown("""
     }
     
     .fixed-design-credit {
+        /* EKRANDA SABİT KALMASI İÇİN 'FIXED' KULLANIYORUZ */
         position: fixed; 
-        top: 2px; /* Daha yukarı alındı (10px -> 2px) */
+        top: 15px; 
         left: 20px;
+        
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
-        font-size: 24px; /* Yazı boyutu hafifçe küçültüldü */
+        font-size: 28px;
         background: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
         background-size: 200% auto; 
         -webkit-background-clip: text; 
         -webkit-text-fill-color: transparent;
         font-weight: bold; 
+        
+        /* En üst katmanda olsun */
         z-index: 999999999;
         pointer-events: none;
         white-space: nowrap; 
