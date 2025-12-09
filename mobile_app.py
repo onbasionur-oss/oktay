@@ -16,64 +16,30 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. GÖRÜNÜM AYARLARI (DARK MODE & GİZLEME)
+# 2. CSS AYARLARI (GİZLEME & KONUMLANDIRMA)
 # ---------------------------------------------------------
 st.markdown("""
     <style>
-    /* --- 1. DARK MODE ZORLAMA (CSS HACK) --- */
+    /* --- 1. DARK MODE ZORLAMA --- */
+    .stApp { background-color: #0E1117 !important; color: #FAFAFA !important; }
+    .streamlit-expanderHeader { background-color: #262730 !important; color: #FAFAFA !important; }
+    div[data-testid="stExpander"] { border: 1px solid #41444C !important; background-color: #161920 !important; }
+    [data-testid="stDataFrame"] { background-color: #262730 !important; }
+    div[data-baseweb="select"] > div { background-color: #262730 !important; color: white !important; }
+
+    /* --- 2. GİZLEME KODLARI (MENÜLER YOK) --- */
+    header, footer, #MainMenu, [data-testid="stHeader"], .stFooter { display: none !important; }
+    [data-testid="stToolbar"], .stAppDeployButton, [data-testid="stStatusWidget"], div[class*="viewerBadge"] { display: none !important; }
+
+    /* --- 3. SAYFA DÜZENİ VE İMZA AYARI --- */
     
-    /* Ana Arka Plan */
-    .stApp {
-        background-color: #0E1117 !important;
-        color: #FAFAFA !important;
-    }
-    
-    /* Expander (Açılır Kutular) Arka Planı */
-    .streamlit-expanderHeader {
-        background-color: #262730 !important;
-        color: #FAFAFA !important;
-        border-radius: 5px;
-    }
-    div[data-testid="stExpander"] {
-        border: 1px solid #41444C !important;
-        border-radius: 5px;
-        background-color: #161920 !important;
-    }
-    
-    /* Tablo Başlıkları ve Hücreler */
-    thead tr th:first-child {display:none}
-    tbody th {display:none}
-    [data-testid="stDataFrame"] {
-        background-color: #262730 !important;
-    }
-    
-    /* Selectbox ve Input Alanları */
-    div[data-baseweb="select"] > div {
-        background-color: #262730 !important;
-        color: white !important;
-        border-color: #41444C !important;
-    }
-    
-    /* --- 2. GİZLEME KODLARI (MENÜ, FOOTER, BUTONLAR) --- */
-    header, footer, #MainMenu, [data-testid="stHeader"], .stFooter {
-        visibility: hidden !important;
-        display: none !important;
-        height: 0px !important;
-    }
-    
-    /* "Manage App" ve Deploy Butonları */
-    .stAppDeployButton, [data-testid="stToolbar"], [data-testid="stStatusWidget"], div[class*="viewerBadge"] {
-        display: none !important;
-        visibility: hidden !important;
-    }
-    
-    /* Sayfa Üst Boşluğunu Al */
+    /* İçeriği biraz aşağı itelim ki imza ile çakışmasın */
     .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 0rem !important;
+        padding-top: 3.5rem !important; 
+        padding-bottom: 1rem !important;
     }
 
-    /* --- 3. TASARIM İMZASI --- */
+    /* TASARIM İMZASI - GÜNCELLENDİ */
     @keyframes gentle-pulse-glow {
         0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
         50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
@@ -81,36 +47,34 @@ st.markdown("""
     }
     
     .fixed-design-credit {
-        position: fixed; top: 10px; left: 20px;
+        /* BURASI DEĞİŞTİ: Fixed yerine Absolute yaptık. */
+        /* Artık sayfa kaydırılınca yukarı gidip kaybolacak, veriyi kapatmayacak. */
+        position: absolute; 
+        top: 15px; 
+        left: 20px;
+        
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
         font-size: 26px;
         background: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
         background-size: 200% auto; 
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        font-weight: bold; z-index: 999999999; pointer-events: none;
-        white-space: nowrap; animation: gentle-pulse-glow 3s ease-in-out infinite;
+        -webkit-background-clip: text; 
+        -webkit-text-fill-color: transparent;
+        font-weight: bold; 
+        z-index: 9999;
+        pointer-events: none;
+        white-space: nowrap; 
+        animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
     
-    /* Buton Stilleri */
-    .stButton button { 
-        width: 100%; 
-        border-radius: 8px; 
-        font-weight: bold;
-        background-color: #FF4B4B; 
-        color: white; 
-        border: none;
-    }
-    .stButton button:hover {
-        background-color: #FF2B2B;
-        color: white;
-    }
+    .stButton button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #FF4B4B; color: white; border: none; }
+    .stButton button:hover { background-color: #FF2B2B; color: white; }
     </style>
     
     <div class="fixed-design-credit">Design by Oktay</div>
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 3. VERİTABANI BAĞLANTISI (ANLIK GÜNCELLEME)
+# 3. VERİTABANI BAĞLANTISI (ANLIK)
 # ---------------------------------------------------------
 @st.cache_resource(ttl=0)
 def get_connection():
@@ -153,7 +117,6 @@ def run_update(query, params=None):
 # ---------------------------------------------------------
 # 4. VERİ HAZIRLIĞI & OTO YENİLEME
 # ---------------------------------------------------------
-st.write("") 
 st.title("🏢 Merkez Genel Durum Raporu")
 
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
@@ -262,6 +225,7 @@ with tab_personel:
             g_c = next((c for c in ['check_in', 'giris'] if c in df_tum_hareketler.columns), None)
             c_c = next((c for c in ['check_out', 'cikis'] if c in df_tum_hareketler.columns), None)
             
+            # SIRALAMA
             cols_sirali = []
             if ad_c: cols_sirali.append(ad_c)
             if g_c: cols_sirali.append(g_c)
