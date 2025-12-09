@@ -16,44 +16,64 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. GİZLEME KODLARI (WILDCARD SEÇİCİLER)
+# 2. GÖRÜNÜM AYARLARI (DARK MODE & GİZLEME)
 # ---------------------------------------------------------
 st.markdown("""
     <style>
-    /* --- HEADER (ÜST KISIM) GİZLEME --- */
-    header {visibility: hidden !important;}
-    [data-testid="stHeader"] {display: none !important;}
+    /* --- 1. DARK MODE ZORLAMA (CSS HACK) --- */
     
-    /* --- FOOTER (ALT KISIM) GİZLEME --- */
-    footer {visibility: hidden !important;}
-    .stFooter {display: none !important;}
+    /* Ana Arka Plan */
+    .stApp {
+        background-color: #0E1117 !important;
+        color: #FAFAFA !important;
+    }
     
-    /* --- SAĞ ÜST TOOLBAR --- */
-    [data-testid="stToolbar"] {display: none !important;}
+    /* Expander (Açılır Kutular) Arka Planı */
+    .streamlit-expanderHeader {
+        background-color: #262730 !important;
+        color: #FAFAFA !important;
+        border-radius: 5px;
+    }
+    div[data-testid="stExpander"] {
+        border: 1px solid #41444C !important;
+        border-radius: 5px;
+        background-color: #161920 !important;
+    }
     
-    /* --- SAĞ ALTTAKİ İNATÇI BUTONLAR --- */
-    /* Deploy butonu */
-    .stDeployButton {display: none !important;}
-    /* Status widget (Running animasyonu vb.) */
-    [data-testid="stStatusWidget"] {display: none !important;}
-    /* Viewer Badge */
-    .viewerBadge_container__1QSob {display: none !important;}
+    /* Tablo Başlıkları ve Hücreler */
+    thead tr th:first-child {display:none}
+    tbody th {display:none}
+    [data-testid="stDataFrame"] {
+        background-color: #262730 !important;
+    }
     
-    /* "Manage App" butonu için geniş kapsamlı yakalama */
-    div[class*="stAppDeployButton"] {display: none !important;}
-    div[data-testid="stDecoration"] {display: none !important;}
+    /* Selectbox ve Input Alanları */
+    div[data-baseweb="select"] > div {
+        background-color: #262730 !important;
+        color: white !important;
+        border-color: #41444C !important;
+    }
     
-    /* --- SAYFA DÜZENİ --- */
-    /* Header gidince yukarıyı toparla */
+    /* --- 2. GİZLEME KODLARI (MENÜ, FOOTER, BUTONLAR) --- */
+    header, footer, #MainMenu, [data-testid="stHeader"], .stFooter {
+        visibility: hidden !important;
+        display: none !important;
+        height: 0px !important;
+    }
+    
+    /* "Manage App" ve Deploy Butonları */
+    .stAppDeployButton, [data-testid="stToolbar"], [data-testid="stStatusWidget"], div[class*="viewerBadge"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Sayfa Üst Boşluğunu Al */
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 0rem !important;
     }
-    
-    /* Ana Menü */
-    #MainMenu {display: none !important;}
 
-    /* --- TASARIM İMZASI --- */
+    /* --- 3. TASARIM İMZASI --- */
     @keyframes gentle-pulse-glow {
         0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
         50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
@@ -61,23 +81,29 @@ st.markdown("""
     }
     
     .fixed-design-credit {
-        position: fixed; 
-        top: 10px; 
-        left: 20px;
+        position: fixed; top: 10px; left: 20px;
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
         font-size: 26px;
         background: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
         background-size: 200% auto; 
-        -webkit-background-clip: text; 
-        -webkit-text-fill-color: transparent;
-        font-weight: bold; 
-        z-index: 999999999;
-        pointer-events: none;
-        white-space: nowrap; 
-        animation: gentle-pulse-glow 3s ease-in-out infinite;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        font-weight: bold; z-index: 999999999; pointer-events: none;
+        white-space: nowrap; animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
     
-    .stButton button { width: 100%; border-radius: 8px; font-weight: bold; }
+    /* Buton Stilleri */
+    .stButton button { 
+        width: 100%; 
+        border-radius: 8px; 
+        font-weight: bold;
+        background-color: #FF4B4B; 
+        color: white; 
+        border: none;
+    }
+    .stButton button:hover {
+        background-color: #FF2B2B;
+        color: white;
+    }
     </style>
     
     <div class="fixed-design-credit">Design by Oktay</div>
@@ -236,7 +262,6 @@ with tab_personel:
             g_c = next((c for c in ['check_in', 'giris'] if c in df_tum_hareketler.columns), None)
             c_c = next((c for c in ['check_out', 'cikis'] if c in df_tum_hareketler.columns), None)
             
-            # SIRALAMA
             cols_sirali = []
             if ad_c: cols_sirali.append(ad_c)
             if g_c: cols_sirali.append(g_c)
