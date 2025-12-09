@@ -16,64 +16,44 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. KESİN GİZLEME KODLARI (ATOMİK CSS - V3)
+# 2. GİZLEME KODLARI (WILDCARD SEÇİCİLER)
 # ---------------------------------------------------------
 st.markdown("""
     <style>
-    /* --- 1. STREAMLIT ARAYÜZÜNÜ YOK ETME (EN GÜÇLÜ YÖNTEM) --- */
+    /* --- HEADER (ÜST KISIM) GİZLEME --- */
+    header {visibility: hidden !important;}
+    [data-testid="stHeader"] {display: none !important;}
     
-    /* Üst Şerit ve Menü */
-    header, [data-testid="stHeader"] {
-        display: none !important;
-        visibility: hidden !important;
-    }
+    /* --- FOOTER (ALT KISIM) GİZLEME --- */
+    footer {visibility: hidden !important;}
+    .stFooter {display: none !important;}
     
-    /* Alt Bilgi (Footer) */
-    footer, .stFooter {
-        display: none !important;
-        visibility: hidden !important;
-    }
+    /* --- SAĞ ÜST TOOLBAR --- */
+    [data-testid="stToolbar"] {display: none !important;}
     
-    /* "Manage App" Butonu ve Sağ Alt Araçlar - ÖZEL HEDEF */
-    .stAppDeployButton {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        height: 0px !important;
-    }
+    /* --- SAĞ ALTTAKİ İNATÇI BUTONLAR --- */
+    /* Deploy butonu */
+    .stDeployButton {display: none !important;}
+    /* Status widget (Running animasyonu vb.) */
+    [data-testid="stStatusWidget"] {display: none !important;}
+    /* Viewer Badge */
+    .viewerBadge_container__1QSob {display: none !important;}
     
-    /* Sağ Üst Araç Çubuğu */
-    [data-testid="stToolbar"] {
-        display: none !important;
-    }
+    /* "Manage App" butonu için geniş kapsamlı yakalama */
+    div[class*="stAppDeployButton"] {display: none !important;}
+    div[data-testid="stDecoration"] {display: none !important;}
     
-    /* Sağ Alt Durum Widget'ı (Running animation vs) */
-    [data-testid="stStatusWidget"] {
-        display: none !important;
-    }
-    
-    /* Viewer Badge (Gri yazılar) */
-    div[class*="viewerBadge"] {
-        display: none !important;
-    }
-    
-    /* Eğer yukarıdakiler çalışmazsa, iframe içindeki butonu hedef al */
-    iframe[title="streamlitAppDeployButton"] {
-        display: none !important;
-    }
-    
-    /* Sayfa boşluklarını sıfırla */
+    /* --- SAYFA DÜZENİ --- */
+    /* Header gidince yukarıyı toparla */
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 0rem !important;
     }
     
-    /* Ana menü ID'si */
-    #MainMenu {
-        display: none !important;
-    }
+    /* Ana Menü */
+    #MainMenu {display: none !important;}
 
-    /* --- 2. TASARIM İMZASI --- */
+    /* --- TASARIM İMZASI --- */
     @keyframes gentle-pulse-glow {
         0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
         50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
@@ -91,7 +71,7 @@ st.markdown("""
         -webkit-background-clip: text; 
         -webkit-text-fill-color: transparent;
         font-weight: bold; 
-        z-index: 999999999 !important; /* En üstte olsun */
+        z-index: 999999999;
         pointer-events: none;
         white-space: nowrap; 
         animation: gentle-pulse-glow 3s ease-in-out infinite;
