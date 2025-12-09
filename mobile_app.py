@@ -5,9 +5,6 @@ import time
 from datetime import datetime, timedelta
 import pytz
 
-# ---------------------------------------------------------
-# 1. AYARLAR (Merkez İkonlu 🏢)
-# ---------------------------------------------------------
 st.set_page_config(
     page_title="Merkez İş Takip",
     page_icon="🏢",
@@ -15,33 +12,30 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ---------------------------------------------------------
-# 2. CSS: SABİT BAR + MENÜYÜ GERİ GETİRME
-# ---------------------------------------------------------
 st.markdown("""
     <style>
-    /* --- 1. DARK MODE ZORLAMA --- */
+    
     .stApp { background-color: #0E1117 !important; color: #FAFAFA !important; }
     .streamlit-expanderHeader { background-color: #262730 !important; color: #FAFAFA !important; }
     div[data-testid="stExpander"] { border: 1px solid #41444C !important; background-color: #161920 !important; }
     [data-testid="stDataFrame"] { background-color: #262730 !important; }
     div[data-baseweb="select"] > div { background-color: #262730 !important; color: white !important; }
 
-    /* --- 2. GİZLEME KODLARI (Gereksizleri Gizle, Menüyü Bırak) --- */
+    
     footer, #MainMenu .footer, .stFooter { display: none !important; }
     .stAppDeployButton { display: none !important; } /* Deploy butonunu gizle ama menüyü bırak */
     [data-testid="stStatusWidget"] { display: none !important; }
     div[class*="viewerBadge"] { display: none !important; }
 
-    /* --- 3. STREAMLIT ÜST MENÜ (GERİ GELDİ) --- */
-    /* Header'ı şeffaf yapıyoruz ki bizim tasarımın üstüne binsin ama kapatmasın */
+    
+    
     header, [data-testid="stHeader"] {
         background-color: transparent !important;
         visibility: visible !important;
         z-index: 9999999 !important; /* En üstte, bizim barın da üstünde */
     }
     
-    /* Sağ üstteki 3 nokta ve araç çubuğunu görünür yap ve sağa yasla */
+    
     [data-testid="stToolbar"] {
         display: flex !important;
         visibility: visible !important;
@@ -50,13 +44,13 @@ st.markdown("""
         color: white !important; /* İkon rengi */
     }
 
-    /* --- 4. İÇERİK BOŞLUĞU --- */
+    
     .block-container {
         padding-top: 5rem !important; 
         padding-bottom: 1rem !important;
     }
 
-    /* --- 5. ÖZEL TASARIM BAR (SABİT DUVAR) --- */
+    
     .fixed-header-container {
         position: fixed;
         top: 0;
@@ -64,11 +58,11 @@ st.markdown("""
         width: 100%;
         height: 60px;
         
-        /* Arka plan: Koyu ve Katı */
+        
         background-color: #0E1117;
         border-bottom: 2px solid #FF4B4B;
         
-        /* Z-Index: Streamlit menüsünün bir tık altında, içeriğin üstünde */
+        
         z-index: 999990; 
         
         display: flex;
@@ -77,8 +71,7 @@ st.markdown("""
         box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
 
-    /* Yazı Stili */
-    .design-text {
+        .design-text {
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
         font-size: 26px;
         font-weight: bold;
@@ -104,9 +97,7 @@ st.markdown("""
     </div>
     """, unsafe_allow_html=True)
 
-# ---------------------------------------------------------
-# 3. BAĞLANTI (ANLIK)
-# ---------------------------------------------------------
+
 @st.cache_resource(ttl=0)
 def get_connection():
     try:
@@ -145,9 +136,7 @@ def run_update(query, params=None):
         st.error(f"Hata: {e}")
         return False
 
-# ---------------------------------------------------------
-# 4. İÇERİK
-# ---------------------------------------------------------
+
 st.title("🏢 Merkez Genel Durum Raporu")
 
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
@@ -166,7 +155,7 @@ if oto_yenile:
     time.sleep(30)
     st.rerun()
 
-# --- VERİ ÇEKME ---
+
 raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 500")
 df_tum = pd.DataFrame(raw_personel)
 df_aktif = pd.DataFrame()
