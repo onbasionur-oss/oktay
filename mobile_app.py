@@ -82,7 +82,7 @@ def run_update(query, params=None):
 # 3. VERİ HAZIRLIĞI & OTO YENİLEME
 # ---------------------------------------------------------
 # BAŞLIK GÜNCELLENDİ
-st.title("🏢 Merkez Genel Durum Raporu")
+st.title("🏢 Merkez Genel Durum Raporu 📢")
 
 # Danimarka Saati
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
