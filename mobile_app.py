@@ -16,43 +16,64 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. ALT KISIMLARI (FOOTER) KESİN YOK ETME KODU
+# 2. KESİN GİZLEME KODLARI (ATOMİK CSS - V3)
 # ---------------------------------------------------------
 st.markdown("""
     <style>
-    /* --- ALT KISIMLARI TEMİZLEME (AGRESİF) --- */
+    /* --- 1. STREAMLIT ARAYÜZÜNÜ YOK ETME (EN GÜÇLÜ YÖNTEM) --- */
     
-    /* 1. Standart Footer (Made with Streamlit) */
-    footer {
+    /* Üst Şerit ve Menü */
+    header, [data-testid="stHeader"] {
+        display: none !important;
         visibility: hidden !important;
+    }
+    
+    /* Alt Bilgi (Footer) */
+    footer, .stFooter {
         display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* "Manage App" Butonu ve Sağ Alt Araçlar - ÖZEL HEDEF */
+    .stAppDeployButton {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
         height: 0px !important;
-        padding: 0px !important;
-        margin: 0px !important;
     }
     
-    /* 2. Streamlit'in Footer Sınıfı */
-    .stFooter {
+    /* Sağ Üst Araç Çubuğu */
+    [data-testid="stToolbar"] {
         display: none !important;
     }
     
-    /* 3. Sayfanın en altındaki boşlukları yok et */
-    div[data-testid="stAppViewContainer"] > section[data-testid="stMain"] > div:last-child {
+    /* Sağ Alt Durum Widget'ı (Running animation vs) */
+    [data-testid="stStatusWidget"] {
+        display: none !important;
+    }
+    
+    /* Viewer Badge (Gri yazılar) */
+    div[class*="viewerBadge"] {
+        display: none !important;
+    }
+    
+    /* Eğer yukarıdakiler çalışmazsa, iframe içindeki butonu hedef al */
+    iframe[title="streamlitAppDeployButton"] {
+        display: none !important;
+    }
+    
+    /* Sayfa boşluklarını sıfırla */
+    .block-container {
+        padding-top: 1rem !important;
         padding-bottom: 0rem !important;
     }
     
-    /* 4. Sağ Altta Çıkan 'Manage App' ve Durum İkonları */
-    .stAppDeployButton { display: none !important; }
-    [data-testid="stStatusWidget"] { display: none !important; }
-    div[class*="viewerBadge"] { display: none !important; }
+    /* Ana menü ID'si */
+    #MainMenu {
+        display: none !important;
+    }
 
-    /* --- ÜST KISIMLARI TEMİZLEME --- */
-    header { visibility: hidden !important; }
-    [data-testid="stHeader"] { display: none !important; }
-    #MainMenu { display: none !important; }
-    [data-testid="stToolbar"] { display: none !important; }
-
-    /* --- TASARIM İMZASI AYARLARI --- */
+    /* --- 2. TASARIM İMZASI --- */
     @keyframes gentle-pulse-glow {
         0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
         50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
@@ -70,19 +91,13 @@ st.markdown("""
         -webkit-background-clip: text; 
         -webkit-text-fill-color: transparent;
         font-weight: bold; 
-        z-index: 9999999 !important;
+        z-index: 999999999 !important; /* En üstte olsun */
         pointer-events: none;
         white-space: nowrap; 
         animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
     
     .stButton button { width: 100%; border-radius: 8px; font-weight: bold; }
-    
-    /* İçerik Header'ın altına girmesin diye üst boşluk ayarı */
-    .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 0rem !important;
-    }
     </style>
     
     <div class="fixed-design-credit">Design by Oktay</div>
@@ -132,7 +147,6 @@ def run_update(query, params=None):
 # ---------------------------------------------------------
 # 4. VERİ HAZIRLIĞI & OTO YENİLEME
 # ---------------------------------------------------------
-# Başlık için biraz boşluk (imza ile çakışmasın)
 st.write("") 
 st.title("🏢 Merkez Genel Durum Raporu")
 
@@ -238,12 +252,11 @@ with tab_personel:
     with col_sag:
         st.subheader("📋 Son Giriş/Çıkış Hareketleri")
         if not df_tum_hareketler.empty:
-            # Sütunları Bul
             ad_c = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_tum_hareketler.columns), None)
             g_c = next((c for c in ['check_in', 'giris'] if c in df_tum_hareketler.columns), None)
             c_c = next((c for c in ['check_out', 'cikis'] if c in df_tum_hareketler.columns), None)
             
-            # SIRALAMA: [İsim, Giriş, Çıkış]
+            # SIRALAMA
             cols_sirali = []
             if ad_c: cols_sirali.append(ad_c)
             if g_c: cols_sirali.append(g_c)
