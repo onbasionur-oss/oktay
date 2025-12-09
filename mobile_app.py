@@ -152,7 +152,7 @@ with col3:
         st.rerun()
 
 if oto_yenile:
-    time.sleep(30)
+    time.sleep
     st.rerun()
 
 
