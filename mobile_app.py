@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. CSS AYARLARI (GİZLEME & KONUMLANDIRMA)
+# 2. KESİN GİZLEME VE TASARIM KODLARI (DÜZELTİLDİ)
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -27,19 +27,18 @@ st.markdown("""
     [data-testid="stDataFrame"] { background-color: #262730 !important; }
     div[data-baseweb="select"] > div { background-color: #262730 !important; color: white !important; }
 
-    /* --- 2. GİZLEME KODLARI (MENÜLER YOK) --- */
-    header, footer, #MainMenu, [data-testid="stHeader"], .stFooter { display: none !important; }
+    /* --- 2. GİZLEME KODLARI (TÜMÜNÜ YOK ET) --- */
+    header, footer, #MainMenu, [data-testid="stHeader"], .stFooter { display: none !important; visibility: hidden !important; height: 0 !important; }
     [data-testid="stToolbar"], .stAppDeployButton, [data-testid="stStatusWidget"], div[class*="viewerBadge"] { display: none !important; }
 
-    /* --- 3. SAYFA DÜZENİ VE İMZA AYARI --- */
-    
-    /* İçeriği biraz aşağı itelim ki imza ile çakışmasın */
+    /* --- 3. SAYFA DÜZENİ (İmza için yer aç) --- */
     .block-container {
-        padding-top: 3.5rem !important; 
-        padding-bottom: 1rem !important;
+        /* İçeriği aşağı itiyoruz ki imza ile çakışmasın */
+        padding-top: 2.5rem !important; 
+        padding-bottom: 0rem !important;
     }
 
-    /* TASARIM İMZASI - GÜNCELLENDİ */
+    /* --- 4. TASARIM İMZASI (Konumu düzeltildi) --- */
     @keyframes gentle-pulse-glow {
         0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
         50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
@@ -47,20 +46,17 @@ st.markdown("""
     }
     
     .fixed-design-credit {
-        /* BURASI DEĞİŞTİ: Fixed yerine Absolute yaptık. */
-        /* Artık sayfa kaydırılınca yukarı gidip kaybolacak, veriyi kapatmayacak. */
-        position: absolute; 
-        top: 15px; 
+        position: fixed; 
+        top: 2px; /* Daha yukarı alındı (10px -> 2px) */
         left: 20px;
-        
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
-        font-size: 26px;
+        font-size: 24px; /* Yazı boyutu hafifçe küçültüldü */
         background: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
         background-size: 200% auto; 
         -webkit-background-clip: text; 
         -webkit-text-fill-color: transparent;
         font-weight: bold; 
-        z-index: 9999;
+        z-index: 999999999;
         pointer-events: none;
         white-space: nowrap; 
         animation: gentle-pulse-glow 3s ease-in-out infinite;
