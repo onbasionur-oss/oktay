@@ -136,7 +136,7 @@ col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
     st.caption(f"📅 Rapor Saati (DK): {dk_saat}")
 with col2:
-    oto_yenile = st.checkbox("🔄 Otomatik Yenile (30sn)", value=False)
+    oto_yenile = st.checkbox("🔄 Otomatik Yenile ", value=False)
 with col3:
     if st.button("🔄 Yenile", type="primary"):
         st.cache_data.clear()
