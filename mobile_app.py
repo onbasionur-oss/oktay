@@ -10,19 +10,29 @@ import pytz
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Merkez İş Takip",
-    page_icon="🏢",  # DEĞİŞTİ: Merkez Simgesi
+    page_icon="🏢",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# --- TASARIM İMZASI ---
+# --- TASARIM İMZASI VE GİZLEME KODLARI ---
 st.markdown("""
     <style>
+    /* 1. İstenmeyen Streamlit İkonlarını Gizle (Menu, Footer, Header) */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    [data-testid="stToolbar"] {visibility: hidden;} 
+    .stDeployButton {display:none;}
+    
+    /* 2. Tasarım İmzası Animasyonu */
     @keyframes gentle-pulse-glow {
         0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
         50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
         100% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
     }
+    
+    /* 3. Sabit İmza Konumu */
     .fixed-design-credit {
         position: fixed; top: 15px; left: 20px;
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
@@ -32,7 +42,14 @@ st.markdown("""
         font-weight: bold; z-index: 999999; pointer-events: none;
         white-space: nowrap; animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
+    
+    /* 4. Buton Stilleri */
     .stButton button { width: 100%; border-radius: 8px; font-weight: bold; }
+    
+    /* 5. Üst boşluğu azalt (Header gizlendiği için yukarı kaydır) */
+    .block-container {
+        padding-top: 2rem;
+    }
     </style>
     <div class="fixed-design-credit">Design by Oktay</div>
     """, unsafe_allow_html=True)
@@ -81,8 +98,7 @@ def run_update(query, params=None):
 # ---------------------------------------------------------
 # 3. VERİ HAZIRLIĞI & OTO YENİLEME
 # ---------------------------------------------------------
-# BAŞLIK GÜNCELLENDİ
-st.title("🏢 Merkez Genel Durum Raporu 📢")
+st.title("🏢 Merkez Genel Durum Raporu")
 
 # Danimarka Saati
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
@@ -92,7 +108,7 @@ col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
     st.caption(f"📅 Rapor Saati (DK): {dk_saat}")
 with col2:
-    oto_yenile = st.checkbox("🔄 Otomatik Yenile ", value=False)
+    oto_yenile = st.checkbox("🔄 Otomatik Yenile (30sn)", value=False)
 with col3:
     if st.button("🔄 Şimdi Yenile", type="primary"):
         st.cache_data.clear()
@@ -159,11 +175,11 @@ tab_personel, tab_gorev, tab_ariza, tab_izin, tab_toplanti, tab_duyuru = st.tabs
     "👷‍♂️ Personel Takibi", "📝 Görevler", "🛠️ Arızalar", "✈️ İzinler", "📅 Toplantı", "📢 Duyurular"
 ])
 
-# --- TAB 1: PERSONEL (İSTENİLEN SIRALAMA) ---
+# --- TAB 1: PERSONEL ---
 with tab_personel:
     col_sol, col_sag = st.columns(2)
     
-    # SOL: AKTİF (Sadece Girenler)
+    # SOL: AKTİF
     with col_sol:
         st.subheader("🟢 Şu An İçeride Olanlar")
         if not df_aktif_personel.empty:
@@ -185,7 +201,7 @@ with tab_personel:
         else:
             st.info("Kimse içeride görünmüyor.")
 
-    # SAĞ: LOG (PERSONEL -> GİRİŞ -> ÇIKIŞ)
+    # SAĞ: LOG
     with col_sag:
         st.subheader("📋 Son Giriş/Çıkış Hareketleri")
         if not df_tum_hareketler.empty:
@@ -194,7 +210,7 @@ with tab_personel:
             g_c = next((c for c in ['check_in', 'giris'] if c in df_tum_hareketler.columns), None)
             c_c = next((c for c in ['check_out', 'cikis'] if c in df_tum_hareketler.columns), None)
             
-            # SIRALAMA BURADA YAPILIYOR: [İsim, Giriş, Çıkış]
+            # SIRALAMA: [İsim, Giriş, Çıkış]
             cols_sirali = []
             if ad_c: cols_sirali.append(ad_c)
             if g_c: cols_sirali.append(g_c)
