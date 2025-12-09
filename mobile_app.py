@@ -16,74 +16,96 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. GÜVENLİ TASARIM VE GİZLEME KODLARI
+# 2. CSS: SABİT BAR + MENÜYÜ GERİ GETİRME
 # ---------------------------------------------------------
 st.markdown("""
     <style>
-    /* --- 1. GENEL TEMA (Karanlık Mod) --- */
-    .stApp { background-color: #0E1117; color: #FAFAFA; }
+    /* --- 1. DARK MODE ZORLAMA --- */
+    .stApp { background-color: #0E1117 !important; color: #FAFAFA !important; }
+    .streamlit-expanderHeader { background-color: #262730 !important; color: #FAFAFA !important; }
+    div[data-testid="stExpander"] { border: 1px solid #41444C !important; background-color: #161920 !important; }
+    [data-testid="stDataFrame"] { background-color: #262730 !important; }
+    div[data-baseweb="select"] > div { background-color: #262730 !important; color: white !important; }
+
+    /* --- 2. GİZLEME KODLARI (Gereksizleri Gizle, Menüyü Bırak) --- */
+    footer, #MainMenu .footer, .stFooter { display: none !important; }
+    .stAppDeployButton { display: none !important; } /* Deploy butonunu gizle ama menüyü bırak */
+    [data-testid="stStatusWidget"] { display: none !important; }
+    div[class*="viewerBadge"] { display: none !important; }
+
+    /* --- 3. STREAMLIT ÜST MENÜ (GERİ GELDİ) --- */
+    /* Header'ı şeffaf yapıyoruz ki bizim tasarımın üstüne binsin ama kapatmasın */
+    header, [data-testid="stHeader"] {
+        background-color: transparent !important;
+        visibility: visible !important;
+        z-index: 9999999 !important; /* En üstte, bizim barın da üstünde */
+    }
     
-    /* --- 2. GİZLENECEK ÖĞELER (GÜVENLİ YÖNTEM) --- */
-    /* Sadece hedef odaklı gizleme yapıyoruz, ana sayfayı bozmuyoruz */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    [data-testid="stToolbar"] {display: none;}
-    .stAppDeployButton {display: none;}
-    [data-testid="stStatusWidget"] {display: none;}
-    
-    /* --- 3. SABİT ÜST BAR (DESIGN BY OKTAY) --- */
-    .fixed-header {
+    /* Sağ üstteki 3 nokta ve araç çubuğunu görünür yap ve sağa yasla */
+    [data-testid="stToolbar"] {
+        display: flex !important;
+        visibility: visible !important;
+        right: 1rem !important;
+        top: 0.5rem !important;
+        color: white !important; /* İkon rengi */
+    }
+
+    /* --- 4. İÇERİK BOŞLUĞU --- */
+    .block-container {
+        padding-top: 5rem !important; 
+        padding-bottom: 1rem !important;
+    }
+
+    /* --- 5. ÖZEL TASARIM BAR (SABİT DUVAR) --- */
+    .fixed-header-container {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 60px; /* Bar yüksekliği */
-        background-color: #0E1117; /* Sayfa rengiyle aynı (Arkayı kapatır) */
-        border-bottom: 2px solid #FF4B4B; /* Alt çizgi */
-        z-index: 999999; /* En üst katman */
+        height: 60px;
+        
+        /* Arka plan: Koyu ve Katı */
+        background-color: #0E1117;
+        border-bottom: 2px solid #FF4B4B;
+        
+        /* Z-Index: Streamlit menüsünün bir tık altında, içeriğin üstünde */
+        z-index: 999990; 
+        
         display: flex;
         align-items: center;
         padding-left: 20px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    }
-    
-    /* Animasyonlu Yazı */
-    .design-text {
-        font-family: 'Brush Script MT', cursive;
-        font-size: 26px;
-        font-weight: bold;
-        background: linear-gradient(to right, #FF4B4B, #FF914D);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        animation: pulse 3s infinite;
-    }
-    
-    @keyframes pulse {
-        0% { transform: scale(1); opacity: 0.9; }
-        50% { transform: scale(1.05); opacity: 1; }
-        100% { transform: scale(1); opacity: 0.9; }
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
 
-    /* --- 4. İÇERİK DÜZENİ --- */
-    /* Sayfa içeriğini header'ın altından başlat */
-    .block-container {
-        padding-top: 5rem !important; 
-        padding-bottom: 2rem !important;
+    /* Yazı Stili */
+    .design-text {
+        font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
+        font-size: 26px;
+        font-weight: bold;
+        background: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
+        background-size: 200% auto; 
+        -webkit-background-clip: text; 
+        -webkit-text-fill-color: transparent;
+        white-space: nowrap; 
+        animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
     
-    /* Tablo ve Buton Stilleri */
-    .stButton button { width: 100%; border-radius: 8px; font-weight: bold; }
-    div[data-testid="stExpander"] { background-color: #1A1C24 !important; border: 1px solid #41444C; }
+    @keyframes gentle-pulse-glow {
+        0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
+        50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
+        100% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
+    }
+    
+    .stButton button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #FF4B4B; color: white; border: none; }
     </style>
     
-    <div class="fixed-header">
+    <div class="fixed-header-container">
         <div class="design-text">Design by Oktay</div>
     </div>
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 3. VERİTABANI BAĞLANTISI
+# 3. BAĞLANTI (ANLIK)
 # ---------------------------------------------------------
 @st.cache_resource(ttl=0)
 def get_connection():
@@ -99,7 +121,6 @@ def get_connection():
             autocommit=True 
         )
     except Exception as e:
-        st.error(f"Bağlantı Hatası: {e}")
         return None
 
 def run_query(query, params=None):
@@ -125,9 +146,8 @@ def run_update(query, params=None):
         return False
 
 # ---------------------------------------------------------
-# 4. SAYFA YAPISI VE OTO-YENİLEME
+# 4. İÇERİK
 # ---------------------------------------------------------
-# Başlık (Artık sabit barın altında kalmayacak çünkü padding verdik)
 st.title("🏢 Merkez Genel Durum Raporu")
 
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
@@ -136,7 +156,7 @@ col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
     st.caption(f"📅 Rapor Saati (DK): {dk_saat}")
 with col2:
-    oto_yenile = st.checkbox("🔄 Otomatik Yenile ", value=False)
+    oto_yenile = st.checkbox("🔄 Otomatik Yenile (30sn)", value=False)
 with col3:
     if st.button("🔄 Yenile", type="primary"):
         st.cache_data.clear()
@@ -146,11 +166,7 @@ if oto_yenile:
     time.sleep(30)
     st.rerun()
 
-# ---------------------------------------------------------
-# 5. VERİLERİ ÇEKME
-# ---------------------------------------------------------
-
-# 1. PERSONEL
+# --- VERİ ÇEKME ---
 raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 500")
 df_tum = pd.DataFrame(raw_personel)
 df_aktif = pd.DataFrame()
@@ -158,28 +174,20 @@ df_aktif = pd.DataFrame()
 if not df_tum.empty:
     c_in = next((c for c in ['check_in', 'giris'] if c in df_tum.columns), None)
     c_out = next((c for c in ['check_out', 'cikis'] if c in df_tum.columns), None)
-
-    if c_in:
-        df_tum[c_in] = pd.to_datetime(df_tum[c_in], errors='coerce') + timedelta(hours=1)
-    
+    if c_in: df_tum[c_in] = pd.to_datetime(df_tum[c_in], errors='coerce') + timedelta(hours=1)
     if c_out:
-        temp_out = pd.to_datetime(df_tum[c_out], errors='coerce')
-        df_tum[c_out] = temp_out + timedelta(hours=1)
-        # Çıkış saati olmayanlar aktiftir
-        df_aktif = df_tum[temp_out.isna()].copy()
+        temp = pd.to_datetime(df_tum[c_out], errors='coerce')
+        df_tum[c_out] = temp + timedelta(hours=1)
+        df_aktif = df_tum[temp.isna()].copy()
     else:
         df_aktif = df_tum.copy()
 
-# 2. Görevler
 df_gorev = pd.DataFrame(run_query("SELECT * FROM gorevler WHERE durum NOT IN ('Tamamlandı', 'Tamamlandi', 'Bitti')"))
-
-# 3. Arızalar
 df_ariza = pd.DataFrame(run_query("SELECT * FROM ariza_bildirimleri WHERE durum NOT IN ('Cozuldu', 'Çözüldü', 'İptal') ORDER BY id DESC"))
 if not df_ariza.empty:
-    t_col = next((c for c in ['bildirim_tarihi', 'tarih'] if c in df_ariza.columns), None)
-    if t_col: df_ariza[t_col] = pd.to_datetime(df_ariza[t_col], errors='coerce')
+    t = next((c for c in ['bildirim_tarihi', 'tarih'] if c in df_ariza.columns), None)
+    if t: df_ariza[t] = pd.to_datetime(df_ariza[t], errors='coerce')
 
-# 4. Diğer
 df_izin = pd.DataFrame(run_query("SELECT * FROM tatil_talepleri WHERE onay_durumu = 'Beklemede'"))
 df_toplanti = pd.DataFrame(run_query("SELECT * FROM rezervasyonlar WHERE baslangic_zamani >= CURDATE()"))
 df_duyuru = pd.DataFrame(run_query("SELECT * FROM duyurular ORDER BY id DESC LIMIT 5"))
@@ -193,110 +201,68 @@ k4.metric("✈️ İzinler", len(df_izin))
 
 st.markdown("---")
 
-# ---------------------------------------------------------
-# 6. SEKMELER
-# ---------------------------------------------------------
+# SEKMELER
+t1, t2, t3, t4, t5, t6 = st.tabs(["👷‍♂️ Personel", "📝 Görevler", "🛠️ Arızalar", "✈️ İzinler", "📅 Toplantı", "📢 Duyurular"])
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["👷‍♂️ Personel", "📝 Görevler", "🛠️ Arızalar", "✈️ İzinler", "📅 Toplantı", "📢 Duyurular"])
-
-# TAB 1: PERSONEL
-with tab1:
+with t1:
     c1, c2 = st.columns(2)
     with c1:
-        st.subheader("🟢 İçeride Olanlar")
+        st.subheader("🟢 İçeride")
         if not df_aktif.empty:
             ad = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_aktif.columns), df_aktif.columns[0])
-            giris = next((c for c in ['check_in', 'giris'] if c in df_aktif.columns), None)
-            cols = [ad]
-            if giris: cols.append(giris)
+            gr = next((c for c in ['check_in', 'giris'] if c in df_aktif.columns), None)
+            cols = [ad]; 
+            if gr: cols.append(gr)
             st.dataframe(df_aktif[cols], hide_index=True, use_container_width=True)
-        else:
-            st.info("Kimse yok.")
-            
+        else: st.info("Kimse yok.")
     with c2:
-        st.subheader("📋 Giriş/Çıkış Logu")
+        st.subheader("📋 Log")
         if not df_tum.empty:
             ad = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_tum.columns), None)
-            giris = next((c for c in ['check_in', 'giris'] if c in df_tum.columns), None)
-            cikis = next((c for c in ['check_out', 'cikis'] if c in df_tum.columns), None)
-            
-            cols_log = []
-            if ad: cols_log.append(ad)
-            if giris: cols_log.append(giris)
-            if cikis: cols_log.append(cikis)
-            
-            st.dataframe(
-                df_tum[cols_log],
-                column_config={
-                    giris: st.column_config.DatetimeColumn("Giriş", format="DD/MM HH:mm"),
-                    cikis: st.column_config.DatetimeColumn("Çıkış", format="DD/MM HH:mm")
-                },
-                hide_index=True, 
-                use_container_width=True
-            )
+            gr = next((c for c in ['check_in', 'giris'] if c in df_tum.columns), None)
+            ck = next((c for c in ['check_out', 'cikis'] if c in df_tum.columns), None)
+            cols = []
+            if ad: cols.append(ad)
+            if gr: cols.append(gr)
+            if ck: cols.append(ck)
+            st.dataframe(df_tum[cols], hide_index=True, use_container_width=True, 
+                         column_config={gr: st.column_config.DatetimeColumn("Giriş", format="HH:mm"), 
+                                        ck: st.column_config.DatetimeColumn("Çıkış", format="HH:mm")})
 
-# TAB 2: GÖREVLER
-with tab2:
-    st.subheader("📝 Görev Yönetimi")
+with t2:
     if not df_gorev.empty:
-        for i, row in df_gorev.iterrows():
-            g_id = row.get('id')
-            g_baslik = row.get('gorev_adi', 'Görev')
-            g_kisi = row.get('atanan_kisi', '-')
-            g_durum = row.get('durum', 'Beklemede')
-            
-            with st.expander(f"📌 {g_baslik} ({g_kisi})"):
+        for i, r in df_gorev.iterrows():
+            gid = r.get('id'); gad = r.get('gorev_adi','G'); gk = r.get('atanan_kisi','-'); gd = r.get('durum','')
+            with st.expander(f"📌 {gad} ({gk})"):
                 c1, c2 = st.columns([2,1])
-                c1.write(f"Durum: {g_durum}")
-                yeni_d = c2.selectbox("Durum:", ["Beklemede", "Devam Ediyor", "Tamamlandı"], key=f"g_{g_id if g_id else i}")
-                if c2.button("Kaydet", key=f"gb_{g_id if g_id else i}"):
-                    if g_id:
-                        run_update("UPDATE gorevler SET durum=%s WHERE id=%s", (yeni_d, g_id))
-                        st.success("Güncellendi!")
-                        time.sleep(0.5)
-                        st.rerun()
-    else:
-        st.success("Tüm görevler tamam.")
+                c1.write(f"Durum: {gd}")
+                nd = c2.selectbox("Durum:", ["Beklemede", "Devam Ediyor", "Tamamlandı"], key=f"g{gid if gid else i}")
+                if c2.button("Kaydet", key=f"gb{gid if gid else i}"):
+                    run_update("UPDATE gorevler SET durum=%s WHERE id=%s", (nd, gid))
+                    st.success("Ok"); time.sleep(0.5); st.rerun()
+    else: st.success("Görev yok.")
 
-# TAB 3: ARIZALAR
-with tab3:
-    st.subheader("🚨 Arıza Bildirimleri")
+with t3:
     if not df_ariza.empty:
-        for i, row in df_ariza.iterrows():
-            a_id = row.get('id')
-            a_baslik = row.get('ariza_baslik', 'Arıza')
-            a_kisi = row.get('gonderen_kullanici_adi', '-')
-            a_durum = row.get('durum', 'Beklemede')
-            a_tarih = row.get('bildirim_tarihi')
-            
-            t_str = a_tarih.strftime('%d/%m %H:%M') if pd.notnull(a_tarih) else ""
-            
-            with st.expander(f"⚠️ #{a_id} {a_baslik} ({a_kisi})"):
+        for i, r in df_ariza.iterrows():
+            aid = r.get('id'); ab = r.get('ariza_baslik','A'); ak = r.get('gonderen_kullanici_adi','-'); ad = r.get('durum','')
+            with st.expander(f"⚠️ #{aid} {ab} ({ak})"):
                 c1, c2 = st.columns([2,1])
-                c1.write(f"**Tarih:** {t_str}")
-                c1.info(f"Durum: {a_durum}")
-                if row.get('aciklama'): c1.write(row['aciklama'])
-                
-                yeni_a = c2.selectbox("İşlem:", ["Beklemede", "İşlemde", "Parça Bekleniyor", "Cozuldu"], key=f"a_{a_id if a_id else i}")
-                if c2.button("Kaydet", key=f"ab_{a_id if a_id else i}"):
-                    if a_id:
-                        run_update("UPDATE ariza_bildirimleri SET durum=%s WHERE id=%s", (yeni_a, a_id))
-                        st.success("Güncellendi!")
-                        time.sleep(0.5)
-                        st.rerun()
-    else:
-        st.success("Arıza yok.")
+                c1.info(f"Durum: {ad}")
+                if r.get('aciklama'): c1.write(r['aciklama'])
+                na = c2.selectbox("İşlem:", ["Beklemede", "İşlemde", "Parça Bekleniyor", "Cozuldu"], key=f"a{aid if aid else i}")
+                if c2.button("Kaydet", key=f"ab{aid if aid else i}"):
+                    run_update("UPDATE ariza_bildirimleri SET durum=%s WHERE id=%s", (na, aid))
+                    st.success("Ok"); time.sleep(0.5); st.rerun()
+    else: st.success("Arıza yok.")
 
-# DİĞERLERİ
-with tab4:
+with t4:
     if not df_izin.empty: st.dataframe(df_izin, use_container_width=True)
-    else: st.info("İzin talebi yok.")
-
-with tab5:
+    else: st.info("İzin yok.")
+with t5:
     if not df_toplanti.empty: st.dataframe(df_toplanti, use_container_width=True)
     else: st.info("Toplantı yok.")
-
-with tab6:
+with t6:
     if not df_duyuru.empty:
         for i, r in df_duyuru.iterrows():
             with st.expander(f"📢 {r.get('baslik','Duyuru')}"): st.write(r.get('icerik',''))
