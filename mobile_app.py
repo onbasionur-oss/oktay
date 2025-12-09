@@ -16,32 +16,33 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. GÜÇLÜ GİZLEME VE TASARIM KODLARI
+# 2. GÜÇLÜ GİZLEME KODLARI (AGRESİF MOD)
 # ---------------------------------------------------------
 st.markdown("""
     <style>
-    /* --- 1. KESİN GİZLEME KODLARI (GÜNCELLENDİ) --- */
+    /* --- STREAMLIT ARAYÜZÜNÜ TEMİZLEME --- */
     
-    /* Sağ üstteki Hamburger Menü ve Header Şeridi */
-    header[data-testid="stHeader"] { display: none !important; }
-    #MainMenu { display: none !important; }
+    /* 1. Üst Menü ve Header */
+    header {visibility: hidden !important;}
+    #MainMenu {visibility: hidden !important;}
+    [data-testid="stHeader"] {visibility: hidden !important;}
     
-    /* Sağ alttaki 'Made with Streamlit' ve Footer */
-    footer { display: none !important; }
-    .stFooter { display: none !important; }
+    /* 2. Alt Footer ve 'Made with Streamlit' */
+    footer {visibility: hidden !important; height: 0px !important;}
+    .stFooter {display: none !important;}
     
-    /* Sağ üstteki 'Deploy' vb. butonlar */
-    [data-testid="stToolbar"] { display: none !important; }
-    div[data-testid="stDecoration"] { display: none !important; }
-    div[data-testid="stStatusWidget"] { display: none !important; }
+    /* 3. Sağ Alttaki ve Üstteki Butonlar (Manage App, Deploy vs) */
+    .stDeployButton {display: none !important;}
+    [data-testid="stToolbar"] {visibility: hidden !important;}
+    [data-testid="stStatusWidget"] {visibility: hidden !important;}
+    div[class*="viewerBadge"] {display: none !important;}
     
-    /* Header gizlendiği için sayfayı yukarı kaydır */
+    /* Sayfanın üstündeki boşluğu kaldır (Header gidince oluşan boşluk) */
     .block-container {
         padding-top: 1rem !important;
-        margin-top: 0rem !important;
     }
 
-    /* --- 2. TASARIM İMZASI --- */
+    /* --- TASARIM İMZASI --- */
     @keyframes gentle-pulse-glow {
         0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
         50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
@@ -58,7 +59,6 @@ st.markdown("""
         white-space: nowrap; animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
     
-    /* Buton Stilleri */
     .stButton button { width: 100%; border-radius: 8px; font-weight: bold; }
     </style>
     
@@ -66,7 +66,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 3. VERİTABANI BAĞLANTISI (ANLIK GÜNCELLEME)
+# 3. VERİTABANI BAĞLANTISI
 # ---------------------------------------------------------
 @st.cache_resource(ttl=0)
 def get_connection():
@@ -111,10 +111,8 @@ def run_update(query, params=None):
 # ---------------------------------------------------------
 st.title("🏢 Merkez Genel Durum Raporu")
 
-# Danimarka Saati
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
 
-# Üst Panel
 col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
     st.caption(f"📅 Rapor Saati (DK): {dk_saat}")
@@ -197,7 +195,6 @@ with tab_personel:
             ad_col = next((c for c in ['kullanici_adi', 'ad_soyad', 'personel'] if c in df_aktif_personel.columns), df_aktif_personel.columns[0])
             giris_col = next((c for c in ['check_in', 'giris'] if c in df_aktif_personel.columns), None)
             
-            # Gösterilecekler
             cols_aktif = [ad_col]
             if giris_col: cols_aktif.append(giris_col)
             
@@ -212,7 +209,7 @@ with tab_personel:
         else:
             st.info("Kimse içeride görünmüyor.")
 
-    # SAĞ: LOG (PERSONEL -> GİRİŞ -> ÇIKIŞ)
+    # SAĞ: LOG
     with col_sag:
         st.subheader("📋 Son Giriş/Çıkış Hareketleri")
         if not df_tum_hareketler.empty:
@@ -220,7 +217,6 @@ with tab_personel:
             g_c = next((c for c in ['check_in', 'giris'] if c in df_tum_hareketler.columns), None)
             c_c = next((c for c in ['check_out', 'cikis'] if c in df_tum_hareketler.columns), None)
             
-            # SIRALAMA
             cols_sirali = []
             if ad_c: cols_sirali.append(ad_c)
             if g_c: cols_sirali.append(g_c)
