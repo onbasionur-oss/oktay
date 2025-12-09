@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. SABİT ÜST BAR (STICKY HEADER) & GİZLEME
+# 2. CSS: SABİT ÜST DUVAR (HEADER) VE GİZLEME
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -24,62 +24,62 @@ st.markdown("""
     .stApp { background-color: #0E1117 !important; color: #FAFAFA !important; }
     .streamlit-expanderHeader { background-color: #262730 !important; color: #FAFAFA !important; }
     div[data-testid="stExpander"] { border: 1px solid #41444C !important; background-color: #161920 !important; }
-    [data-testid="stDataFrame"] { background-color: #262730 !important; }
-    div[data-baseweb="select"] > div { background-color: #262730 !important; color: white !important; }
-
-    /* --- 2. GİZLEME KODLARI (TÜMÜNÜ YOK ET) --- */
-    header, footer, #MainMenu, [data-testid="stHeader"], .stFooter { display: none !important; visibility: hidden !important; height: 0 !important; }
+    
+    /* --- 2. GİZLEME KODLARI --- */
+    header, footer, #MainMenu, [data-testid="stHeader"], .stFooter { display: none !important; }
     [data-testid="stToolbar"], .stAppDeployButton, [data-testid="stStatusWidget"], div[class*="viewerBadge"] { display: none !important; }
 
-    /* --- 3. İÇERİK AYARI --- */
-    /* Sayfanın en tepesindeki boşluğu artırıyoruz ki ilk açılışta başlık sabit barın altında kalmasın */
+    /* --- 3. İÇERİK BOŞLUĞU --- */
+    /* Sayfanın içeriğini aşağı itiyoruz ki sabit başlığın altında kalmasın */
     .block-container {
-        padding-top: 4rem !important; 
+        padding-top: 80px !important; /* Başlık yüksekliği kadar boşluk */
         padding-bottom: 1rem !important;
     }
 
-    /* --- 4. TASARIM İMZASI (KATI ARKA PLANLI) --- */
+    /* --- 4. SABİT DUVAR (HEADER) --- */
+    .fixed-header-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 60px; /* Şeridin yüksekliği */
+        
+        /* EN ÖNEMLİ KISIM: ARKA PLAN */
+        /* Sayfa rengiyle aynı (#0E1117) ve KATI renk. Şeffaflık yok. */
+        background-color: #0E1117;
+        
+        /* Altına Çizgi (Sınır) */
+        border-bottom: 2px solid #FF4B4B; 
+        
+        /* Her şeyin üstünde durması için çok yüksek Z-Index */
+        z-index: 999999;
+        
+        /* İçerik Hizalama */
+        display: flex;
+        align-items: center;
+        padding-left: 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5); /* Hafif gölge */
+    }
+
+    /* --- 5. YAZI STİLİ VE ANİMASYON --- */
     @keyframes gentle-pulse-glow {
         0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
         50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
         100% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
     }
-    
-    .fixed-design-credit {
-        /* KONUM: Ekranın en tepesine çiviliyoruz */
-        position: fixed;
-        top: 0;
-        left: 0;
-        
-        /* BOYUT: Ekranı tam kapla */
-        width: 100vw; 
-        height: 50px; /* Şeridin yüksekliği */
-        
-        /* ÖNEMLİ: ARKA PLAN RENGİ */
-        /* Bu renk sayfanın arka planıyla aynı (#0E1117) olmalı ki alttan geçen yazıları kapatsın */
-        background-color: #0E1117; 
-        border-bottom: 1px solid #262730; /* Altına ince çizgi */
-        
-        /* İÇERİK HİZALAMA */
-        display: flex;
-        align-items: center;
-        padding-left: 20px;
-        
-        /* KATMAN: Her şeyin üstünde */
-        z-index: 999999;
-        
-        /* FONT STİLİ */
+
+    .design-text {
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
-        font-size: 24px;
+        font-size: 26px;
         font-weight: bold;
         
-        /* RENK GRADYANI */
-        background-image: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
+        /* Renk Gradyanı */
+        background: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
         background-size: 200% auto; 
         -webkit-background-clip: text; 
         -webkit-text-fill-color: transparent;
         
-        /* ANİMASYON */
+        white-space: nowrap; 
         animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
     
@@ -87,7 +87,9 @@ st.markdown("""
     .stButton button:hover { background-color: #FF2B2B; color: white; }
     </style>
     
-    <div class="fixed-design-credit">Design by Oktay</div>
+    <div class="fixed-header-container">
+        <div class="design-text">Design by Oktay</div>
+    </div>
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
