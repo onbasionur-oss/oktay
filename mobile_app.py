@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. SABİT ÜST BAR VE GİZLEME AYARLARI
+# 2. SABİT ÜST BAR (STICKY HEADER) & GİZLEME
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -31,15 +31,14 @@ st.markdown("""
     header, footer, #MainMenu, [data-testid="stHeader"], .stFooter { display: none !important; visibility: hidden !important; height: 0 !important; }
     [data-testid="stToolbar"], .stAppDeployButton, [data-testid="stStatusWidget"], div[class*="viewerBadge"] { display: none !important; }
 
-    /* --- 3. SAYFA DÜZENİ (İÇERİĞİ AŞAĞI İTME) --- */
+    /* --- 3. İÇERİK AYARI --- */
+    /* Sayfanın en tepesindeki boşluğu artırıyoruz ki ilk açılışta başlık sabit barın altında kalmasın */
     .block-container {
-        /* Üst barın yüksekliği kadar boşluk bırakıyoruz */
-        /* Böylece ilk açılışta başlık barın altında kalmaz */
-        padding-top: 5rem !important; 
+        padding-top: 4rem !important; 
         padding-bottom: 1rem !important;
     }
 
-    /* --- 4. TASARIM İMZASI (SABİT ÜST BAR ŞEKLİNDE) --- */
+    /* --- 4. TASARIM İMZASI (KATI ARKA PLANLI) --- */
     @keyframes gentle-pulse-glow {
         0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
         50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
@@ -47,40 +46,40 @@ st.markdown("""
     }
     
     .fixed-design-credit {
-        /* KONUMLANDIRMA: Ekrana çivile */
-        position: fixed; 
-        top: 0; 
+        /* KONUM: Ekranın en tepesine çiviliyoruz */
+        position: fixed;
+        top: 0;
         left: 0;
         
-        /* BOYUTLANDIRMA: Ekranı tam kapla */
-        width: 100%;
-        height: 60px; /* Şeridin yüksekliği */
+        /* BOYUT: Ekranı tam kapla */
+        width: 100vw; 
+        height: 50px; /* Şeridin yüksekliği */
         
-        /* GÖRÜNÜM: Arka planı koyu yap (Alttan geçen yazıları kapatır) */
+        /* ÖNEMLİ: ARKA PLAN RENGİ */
+        /* Bu renk sayfanın arka planıyla aynı (#0E1117) olmalı ki alttan geçen yazıları kapatsın */
         background-color: #0E1117; 
-        border-bottom: 2px solid #262730; /* Altına şık bir çizgi */
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3); /* Hafif gölge */
+        border-bottom: 1px solid #262730; /* Altına ince çizgi */
         
         /* İÇERİK HİZALAMA */
         display: flex;
-        align-items: center; /* Dikey ortala */
-        padding-left: 20px; /* Soldan boşluk */
+        align-items: center;
+        padding-left: 20px;
         
-        /* FONT AYARLARI */
+        /* KATMAN: Her şeyin üstünde */
+        z-index: 999999;
+        
+        /* FONT STİLİ */
         font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
-        font-size: 28px;
+        font-size: 24px;
+        font-weight: bold;
         
-        /* Renk Gradyanı */
+        /* RENK GRADYANI */
         background-image: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
         background-size: 200% auto; 
         -webkit-background-clip: text; 
         -webkit-text-fill-color: transparent;
-        font-weight: bold; 
         
-        /* KATMAN SIRASI: En üstte */
-        z-index: 999999999;
-        
-        /* Animasyon */
+        /* ANİMASYON */
         animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
     
