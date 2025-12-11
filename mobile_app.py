@@ -89,13 +89,14 @@ st.markdown("""
     
     .stButton button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #FF4B4B; color: white; border: none; }
     
-    /* Sağ Panel Başlıkları için Stil */
-    .right-header {
-        border-bottom: 1px solid #41444C;
-        padding-bottom: 5px;
-        margin-bottom: 10px;
-        color: #FF914D;
+    /* Sağ Panel Başlık Stili */
+    .sag-baslik {
+        color: #FF4B4B;
         font-weight: bold;
+        border-bottom: 1px solid #444;
+        margin-top: 20px;
+        margin-bottom: 10px;
+        font-size: 1.1em;
     }
     </style>
     
@@ -152,12 +153,13 @@ st.title("🏢 Merkez Genel Durum Raporu 📢")
 
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
 
-col_top1, col_top2, col_top3 = st.columns([2, 1, 1])
-with col_top1:
+# ÜST KISIM (Header)
+col_h1, col_h2, col_h3 = st.columns([2, 1, 1])
+with col_h1:
     st.caption(f"📅 Rapor Saati (DK): {dk_saat}")
-with col_top2:
+with col_h2:
     oto_yenile = st.checkbox("🔄 Otomatik Yenile ", value=False)
-with col_top3:
+with col_h3:
     if st.button("🔄 Yenile", type="primary"):
         st.cache_data.clear()
         st.rerun()
@@ -167,29 +169,25 @@ if oto_yenile:
     st.rerun()
 
 # --- VERİ ÇEKME ---
-# Log için limiti artırdık, aşağıda filtreleyeceğiz
-raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 1000")
+# Log tablosu için biraz fazla veri çekiyoruz, sonra filtreleyeceğiz
+raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 2000")
 df_tum = pd.DataFrame(raw_personel)
 df_aktif = pd.DataFrame()
 
-# Tarih ve Aktiflik İşlemleri
+# Tarih Ayarları ve Aktif Personel Bulma
 if not df_tum.empty:
     c_in = next((c for c in ['check_in', 'giris'] if c in df_tum.columns), None)
     c_out = next((c for c in ['check_out', 'cikis'] if c in df_tum.columns), None)
     
-    # Check-in datetime formatla
-    if c_in: 
-        df_tum[c_in] = pd.to_datetime(df_tum[c_in], errors='coerce') + timedelta(hours=1)
-    
-    # Check-out ve Aktif Personel
+    if c_in: df_tum[c_in] = pd.to_datetime(df_tum[c_in], errors='coerce') + timedelta(hours=1)
     if c_out:
         temp = pd.to_datetime(df_tum[c_out], errors='coerce')
         df_tum[c_out] = temp + timedelta(hours=1)
+        # Çıkış saati boş olanlar aktiftir
         df_aktif = df_tum[temp.isna()].copy()
     else:
         df_aktif = df_tum.copy()
 
-# Diğer veriler
 df_gorev = pd.DataFrame(run_query("SELECT * FROM gorevler WHERE durum NOT IN ('Tamamlandı', 'Tamamlandi', 'Bitti')"))
 df_ariza = pd.DataFrame(run_query("SELECT * FROM ariza_bildirimleri WHERE durum NOT IN ('Cozuldu', 'Çözüldü', 'İptal') ORDER BY id DESC"))
 if not df_ariza.empty:
@@ -201,79 +199,30 @@ df_toplanti = pd.DataFrame(run_query("SELECT * FROM rezervasyonlar WHERE baslang
 df_duyuru = pd.DataFrame(run_query("SELECT * FROM duyurular ORDER BY id DESC LIMIT 5"))
 
 # ---------------------------------------------------------
-# 5. EKRAN DÜZENİ (SOL: İŞLEMLER | SAĞ: BİLGİ PANELI)
+# 5. SAYFA DÜZENİ (SOL: %75, SAĞ: %25)
 # ---------------------------------------------------------
-# Ekranı Sol (%75) ve Sağ (%25) olarak ikiye bölüyoruz
-main_col, right_col = st.columns([3, 1])
+col_main, col_right = st.columns([3, 1])
 
-# --- SAĞ TARAF (BİLGİ PANELİ) ---
-with right_col:
-    # 1. Aktif Personel Listesi
-    st.markdown('<div class="right-header">👥 Aktif Personel</div>', unsafe_allow_html=True)
-    if not df_aktif.empty:
-        ad_col = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_aktif.columns), df_aktif.columns[0])
-        st.dataframe(df_aktif[[ad_col]], hide_index=True, use_container_width=True)
-    else:
-        st.info("İçeride kimse yok.")
-    
-    st.markdown("---")
-    
-    # 2. Arızalar
-    st.markdown('<div class="right-header">🚨 Arıza Bildirimleri</div>', unsafe_allow_html=True)
-    if not df_ariza.empty:
-        st.error(f"{len(df_ariza)} Adet Açık Arıza")
-        for i, r in df_ariza.iterrows():
-            st.caption(f"⚠️ {r.get('ariza_baslik', 'Arıza')}")
-    else:
-        st.success("Arıza Yok")
-
-    st.markdown("---")
-
-    # 3. Toplantılar
-    st.markdown('<div class="right-header">📅 Yaklaşan Toplantılar</div>', unsafe_allow_html=True)
-    if not df_toplanti.empty:
-        for i, r in df_toplanti.iterrows():
-            baslangic = r.get('baslangic_zamani')
-            konu = r.get('toplanti_konusu', 'Toplantı')
-            st.warning(f"🕒 {baslangic}\n📌 {konu}")
-    else:
-        st.info("Toplantı Yok")
-
-    st.markdown("---")
-
-    # 4. Duyurular
-    st.markdown('<div class="right-header">📢 Duyurular</div>', unsafe_allow_html=True)
-    if not df_duyuru.empty:
-        for i, r in df_duyuru.iterrows():
-            with st.expander(f"🔹 {r.get('baslik','Duyuru')}"):
-                st.write(r.get('icerik',''))
-    else:
-        st.write("Yeni duyuru yok.")
-
-
-# --- SOL TARAF (ANA İŞLEMLER VE TABLAR) ---
-with main_col:
-    # KPI (Ana özet metrikler üstte kalsın)
+# --- SOL TARAF (ANA İŞLEMLER) ---
+with col_main:
+    # KPI
     k1, k2, k3, k4 = st.columns(4)
-    k1.metric("👥 Aktif", len(df_aktif))
+    k1.metric("👥 Aktif Personel", len(df_aktif))
     k2.metric("📋 Açık Görev", len(df_gorev))
     k3.metric("🚨 Arızalar", len(df_ariza), delta_color="inverse")
-    k4.metric("✈️ İzin", len(df_izin))
+    k4.metric("✈️ İzinler", len(df_izin))
 
     st.markdown("---")
 
     # SEKMELER
-    t1, t2, t3, t4 = st.tabs(["👷‍♂️ Personel & Log", "📝 Görev Yönetimi", "🛠️ Arıza İşlemleri", "✈️ İzinler"])
+    t1, t2, t3, t4 = st.tabs(["👷‍♂️ Personel & Log", "📝 Görevler", "🛠️ Arızalar", "✈️ İzinler"])
 
     with t1:
-        st.subheader("📋 Son 1 Haftalık Giriş/Çıkış Logları")
-        
-        # LOG FİLTRELEME (Son 1 Hafta)
-        df_log_goster = pd.DataFrame()
+        st.subheader("📋 Giriş/Çıkış Logları (Son 1 Hafta)")
+        # LOG FİLTRELEME: Sadece son 1 haftayı göster
         if not df_tum.empty and c_in:
             bir_hafta_once = datetime.now() - timedelta(days=7)
-            # Tarihe göre filtrele (Check-in zamanı 1 haftadan yeni olanlar)
-            df_log_goster = df_tum[df_tum[c_in] > bir_hafta_once].copy()
+            df_log_filtered = df_tum[df_tum[c_in] > bir_hafta_once].copy()
             
             ad = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_tum.columns), None)
             gr = next((c for c in ['check_in', 'giris'] if c in df_tum.columns), None)
@@ -284,13 +233,14 @@ with main_col:
             if gr: cols.append(gr)
             if ck: cols.append(ck)
             
-            st.dataframe(df_log_goster[cols], hide_index=True, use_container_width=True, 
-                         column_config={gr: st.column_config.DatetimeColumn("Giriş", format="DD.MM HH:mm"), 
-                                        ck: st.column_config.DatetimeColumn("Çıkış", format="DD.MM HH:mm")})
+            st.dataframe(df_log_filtered[cols], hide_index=True, use_container_width=True, 
+                         column_config={
+                             gr: st.column_config.DatetimeColumn("Giriş", format="DD.MM HH:mm"), 
+                             ck: st.column_config.DatetimeColumn("Çıkış", format="DD.MM HH:mm")
+                         })
         else:
-            st.info("Kayıt bulunamadı.")
+            st.info("Son 1 haftaya ait kayıt yok.")
 
-    # --- GÖREVLER ---
     with t2:
         if not df_gorev.empty:
             for i, r in df_gorev.iterrows():
@@ -298,18 +248,13 @@ with main_col:
                 gad = r.get('gorev_adi','G')
                 gk = r.get('atanan_kisi','-')
                 gd = r.get('durum','')
-                
                 g_aciklama = r.get('aciklama', r.get('gorev_aciklamasi', r.get('detay', '')))
                 
                 with st.expander(f"📌 {gad} ({gk})"):
-                    if g_aciklama:
-                        st.info(f"📄 **Açıklama:** {g_aciklama}")
-                    
+                    if g_aciklama: st.info(f"📄 **Açıklama:** {g_aciklama}")
                     c1, c2 = st.columns([2,1])
                     c1.write(f"**Mevcut Durum:** {gd}")
-                    
                     nd = c2.selectbox("Yeni Durum:", ["Beklemede", "Devam Ediyor", "Tamamlandı"], key=f"g{gid if gid else i}")
-                    
                     if c2.button("Kaydet", key=f"gb{gid if gid else i}"):
                         run_update("UPDATE gorevler SET durum=%s WHERE id=%s", (nd, gid))
                         st.success("Güncellendi!")
@@ -317,7 +262,6 @@ with main_col:
                         st.rerun()
         else: st.success("Görev yok.")
 
-    # --- ARIZALAR ---
     with t3:
         if not df_ariza.empty:
             for i, r in df_ariza.iterrows():
@@ -332,7 +276,45 @@ with main_col:
                         st.success("Ok"); time.sleep(0.5); st.rerun()
         else: st.success("Arıza yok.")
 
-    # --- İZİNLER ---
     with t4:
         if not df_izin.empty: st.dataframe(df_izin, use_container_width=True)
         else: st.info("İzin yok.")
+
+# --- SAĞ TARAF (BİLGİ PANELİ / WIDGETLAR) ---
+with col_right:
+    # 1. AKTİF PERSONEL
+    st.markdown('<div class="sag-baslik">👥 İçerdeki Personel</div>', unsafe_allow_html=True)
+    if not df_aktif.empty:
+        ad = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_aktif.columns), df_aktif.columns[0])
+        st.dataframe(df_aktif[[ad]], hide_index=True, use_container_width=True)
+    else:
+        st.info("Kimse yok.")
+    
+    # 2. ARIZA DURUMU
+    st.markdown('<div class="sag-baslik">🚨 Arıza Durumu</div>', unsafe_allow_html=True)
+    if not df_ariza.empty:
+        st.error(f"{len(df_ariza)} Aktif Arıza")
+        # Sadece başlıkları listeleyelim
+        for i, r in df_ariza.iterrows():
+            st.caption(f"🔧 {r.get('ariza_baslik', '-')}")
+    else:
+        st.success("Sistem Normal")
+
+    # 3. TOPLANTILAR
+    st.markdown('<div class="sag-baslik">📅 Toplantılar</div>', unsafe_allow_html=True)
+    if not df_toplanti.empty:
+        for i, r in df_toplanti.iterrows():
+            baslangic = r.get('baslangic_zamani')
+            konu = r.get('toplanti_konusu', 'Toplantı')
+            st.warning(f"🕒 {baslangic}\n📌 {konu}")
+    else:
+        st.info("Planlı toplantı yok.")
+    
+    # 4. DUYURULAR
+    st.markdown('<div class="sag-baslik">📢 Duyurular</div>', unsafe_allow_html=True)
+    if not df_duyuru.empty:
+        for i, r in df_duyuru.iterrows():
+            with st.expander(f"🔹 {r.get('baslik','Duyuru')}"):
+                st.write(r.get('icerik',''))
+    else:
+        st.write("Duyuru yok.")
