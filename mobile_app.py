@@ -88,6 +88,15 @@ st.markdown("""
     }
     
     .stButton button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #FF4B4B; color: white; border: none; }
+    
+    /* Sağ Panel Başlıkları için Stil */
+    .right-header {
+        border-bottom: 1px solid #41444C;
+        padding-bottom: 5px;
+        margin-bottom: 10px;
+        color: #FF914D;
+        font-weight: bold;
+    }
     </style>
     
     <div class="fixed-header-container">
@@ -143,12 +152,12 @@ st.title("🏢 Merkez Genel Durum Raporu 📢")
 
 dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
 
-col1, col2, col3 = st.columns([2, 1, 1])
-with col1:
+col_top1, col_top2, col_top3 = st.columns([2, 1, 1])
+with col_top1:
     st.caption(f"📅 Rapor Saati (DK): {dk_saat}")
-with col2:
+with col_top2:
     oto_yenile = st.checkbox("🔄 Otomatik Yenile ", value=False)
-with col3:
+with col_top3:
     if st.button("🔄 Yenile", type="primary"):
         st.cache_data.clear()
         st.rerun()
@@ -158,14 +167,21 @@ if oto_yenile:
     st.rerun()
 
 # --- VERİ ÇEKME ---
-raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 500")
+# Log için limiti artırdık, aşağıda filtreleyeceğiz
+raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 1000")
 df_tum = pd.DataFrame(raw_personel)
 df_aktif = pd.DataFrame()
 
+# Tarih ve Aktiflik İşlemleri
 if not df_tum.empty:
     c_in = next((c for c in ['check_in', 'giris'] if c in df_tum.columns), None)
     c_out = next((c for c in ['check_out', 'cikis'] if c in df_tum.columns), None)
-    if c_in: df_tum[c_in] = pd.to_datetime(df_tum[c_in], errors='coerce') + timedelta(hours=1)
+    
+    # Check-in datetime formatla
+    if c_in: 
+        df_tum[c_in] = pd.to_datetime(df_tum[c_in], errors='coerce') + timedelta(hours=1)
+    
+    # Check-out ve Aktif Personel
     if c_out:
         temp = pd.to_datetime(df_tum[c_out], errors='coerce')
         df_tum[c_out] = temp + timedelta(hours=1)
@@ -173,6 +189,7 @@ if not df_tum.empty:
     else:
         df_aktif = df_tum.copy()
 
+# Diğer veriler
 df_gorev = pd.DataFrame(run_query("SELECT * FROM gorevler WHERE durum NOT IN ('Tamamlandı', 'Tamamlandi', 'Bitti')"))
 df_ariza = pd.DataFrame(run_query("SELECT * FROM ariza_bildirimleri WHERE durum NOT IN ('Cozuldu', 'Çözüldü', 'İptal') ORDER BY id DESC"))
 if not df_ariza.empty:
@@ -180,97 +197,142 @@ if not df_ariza.empty:
     if t: df_ariza[t] = pd.to_datetime(df_ariza[t], errors='coerce')
 
 df_izin = pd.DataFrame(run_query("SELECT * FROM tatil_talepleri WHERE onay_durumu = 'Beklemede'"))
-df_toplanti = pd.DataFrame(run_query("SELECT * FROM rezervasyonlar WHERE baslangic_zamani >= CURDATE()"))
+df_toplanti = pd.DataFrame(run_query("SELECT * FROM rezervasyonlar WHERE baslangic_zamani >= CURDATE() ORDER BY baslangic_zamani ASC LIMIT 5"))
 df_duyuru = pd.DataFrame(run_query("SELECT * FROM duyurular ORDER BY id DESC LIMIT 5"))
 
-# KPI
-k1, k2, k3, k4 = st.columns(4)
-k1.metric("👥 Aktif Personel", len(df_aktif))
-k2.metric("📋 Açık Görev", len(df_gorev))
-k3.metric("🚨 Arızalar", len(df_ariza), delta_color="inverse")
-k4.metric("✈️ İzinler", len(df_izin))
+# ---------------------------------------------------------
+# 5. EKRAN DÜZENİ (SOL: İŞLEMLER | SAĞ: BİLGİ PANELI)
+# ---------------------------------------------------------
+# Ekranı Sol (%75) ve Sağ (%25) olarak ikiye bölüyoruz
+main_col, right_col = st.columns([3, 1])
 
-st.markdown("---")
+# --- SAĞ TARAF (BİLGİ PANELİ) ---
+with right_col:
+    # 1. Aktif Personel Listesi
+    st.markdown('<div class="right-header">👥 Aktif Personel</div>', unsafe_allow_html=True)
+    if not df_aktif.empty:
+        ad_col = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_aktif.columns), df_aktif.columns[0])
+        st.dataframe(df_aktif[[ad_col]], hide_index=True, use_container_width=True)
+    else:
+        st.info("İçeride kimse yok.")
+    
+    st.markdown("---")
+    
+    # 2. Arızalar
+    st.markdown('<div class="right-header">🚨 Arıza Bildirimleri</div>', unsafe_allow_html=True)
+    if not df_ariza.empty:
+        st.error(f"{len(df_ariza)} Adet Açık Arıza")
+        for i, r in df_ariza.iterrows():
+            st.caption(f"⚠️ {r.get('ariza_baslik', 'Arıza')}")
+    else:
+        st.success("Arıza Yok")
 
-# SEKMELER
-t1, t2, t3, t4, t5, t6 = st.tabs(["👷‍♂️ Personel", "📝 Görevler", "🛠️ Arızalar", "✈️ İzinler", "📅 Toplantı", "📢 Duyurular"])
+    st.markdown("---")
 
-with t1:
-    c1, c2 = st.columns(2)
-    with c1:
-        st.subheader("🟢 İçeride")
-        if not df_aktif.empty:
-            ad = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_aktif.columns), df_aktif.columns[0])
-            gr = next((c for c in ['check_in', 'giris'] if c in df_aktif.columns), None)
-            cols = [ad]; 
-            if gr: cols.append(gr)
-            st.dataframe(df_aktif[cols], hide_index=True, use_container_width=True)
-        else: st.info("Kimse yok.")
-    with c2:
-        st.subheader("📋 Log")
-        if not df_tum.empty:
+    # 3. Toplantılar
+    st.markdown('<div class="right-header">📅 Yaklaşan Toplantılar</div>', unsafe_allow_html=True)
+    if not df_toplanti.empty:
+        for i, r in df_toplanti.iterrows():
+            baslangic = r.get('baslangic_zamani')
+            konu = r.get('toplanti_konusu', 'Toplantı')
+            st.warning(f"🕒 {baslangic}\n📌 {konu}")
+    else:
+        st.info("Toplantı Yok")
+
+    st.markdown("---")
+
+    # 4. Duyurular
+    st.markdown('<div class="right-header">📢 Duyurular</div>', unsafe_allow_html=True)
+    if not df_duyuru.empty:
+        for i, r in df_duyuru.iterrows():
+            with st.expander(f"🔹 {r.get('baslik','Duyuru')}"):
+                st.write(r.get('icerik',''))
+    else:
+        st.write("Yeni duyuru yok.")
+
+
+# --- SOL TARAF (ANA İŞLEMLER VE TABLAR) ---
+with main_col:
+    # KPI (Ana özet metrikler üstte kalsın)
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("👥 Aktif", len(df_aktif))
+    k2.metric("📋 Açık Görev", len(df_gorev))
+    k3.metric("🚨 Arızalar", len(df_ariza), delta_color="inverse")
+    k4.metric("✈️ İzin", len(df_izin))
+
+    st.markdown("---")
+
+    # SEKMELER
+    t1, t2, t3, t4 = st.tabs(["👷‍♂️ Personel & Log", "📝 Görev Yönetimi", "🛠️ Arıza İşlemleri", "✈️ İzinler"])
+
+    with t1:
+        st.subheader("📋 Son 1 Haftalık Giriş/Çıkış Logları")
+        
+        # LOG FİLTRELEME (Son 1 Hafta)
+        df_log_goster = pd.DataFrame()
+        if not df_tum.empty and c_in:
+            bir_hafta_once = datetime.now() - timedelta(days=7)
+            # Tarihe göre filtrele (Check-in zamanı 1 haftadan yeni olanlar)
+            df_log_goster = df_tum[df_tum[c_in] > bir_hafta_once].copy()
+            
             ad = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_tum.columns), None)
             gr = next((c for c in ['check_in', 'giris'] if c in df_tum.columns), None)
             ck = next((c for c in ['check_out', 'cikis'] if c in df_tum.columns), None)
+            
             cols = []
             if ad: cols.append(ad)
             if gr: cols.append(gr)
             if ck: cols.append(ck)
-            st.dataframe(df_tum[cols], hide_index=True, use_container_width=True, 
-                         column_config={gr: st.column_config.DatetimeColumn("Giriş", format="HH:mm"), 
-                                        ck: st.column_config.DatetimeColumn("Çıkış", format="HH:mm")})
-
-# --- GÖREVLER (AÇIKLAMA EKLENDİ) ---
-with t2:
-    if not df_gorev.empty:
-        for i, r in df_gorev.iterrows():
-            gid = r.get('id')
-            gad = r.get('gorev_adi','G')
-            gk = r.get('atanan_kisi','-')
-            gd = r.get('durum','')
             
-            # Açıklamayı bul (Farklı isimler olabilir diye kontrol ediyoruz)
-            g_aciklama = r.get('aciklama', r.get('gorev_aciklamasi', r.get('detay', '')))
-            
-            with st.expander(f"📌 {gad} ({gk})"):
-                # EĞER AÇIKLAMA VARSA GÖSTER
-                if g_aciklama:
-                    st.info(f"📄 **Açıklama:** {g_aciklama}")
-                
-                c1, c2 = st.columns([2,1])
-                c1.write(f"**Mevcut Durum:** {gd}")
-                
-                nd = c2.selectbox("Yeni Durum:", ["Beklemede", "Devam Ediyor", "Tamamlandı"], key=f"g{gid if gid else i}")
-                
-                if c2.button("Kaydet", key=f"gb{gid if gid else i}"):
-                    run_update("UPDATE gorevler SET durum=%s WHERE id=%s", (nd, gid))
-                    st.success("Güncellendi!")
-                    time.sleep(0.5)
-                    st.rerun()
-    else: st.success("Görev yok.")
+            st.dataframe(df_log_goster[cols], hide_index=True, use_container_width=True, 
+                         column_config={gr: st.column_config.DatetimeColumn("Giriş", format="DD.MM HH:mm"), 
+                                        ck: st.column_config.DatetimeColumn("Çıkış", format="DD.MM HH:mm")})
+        else:
+            st.info("Kayıt bulunamadı.")
 
-with t3:
-    if not df_ariza.empty:
-        for i, r in df_ariza.iterrows():
-            aid = r.get('id'); ab = r.get('ariza_baslik','A'); ak = r.get('gonderen_kullanici_adi','-'); ad = r.get('durum','')
-            with st.expander(f"⚠️ #{aid} {ab} ({ak})"):
-                c1, c2 = st.columns([2,1])
-                c1.info(f"Durum: {ad}")
-                if r.get('aciklama'): c1.write(f"**Detay:** {r['aciklama']}")
-                na = c2.selectbox("İşlem:", ["Beklemede", "İşlemde", "Parça Bekleniyor", "Cozuldu"], key=f"a{aid if aid else i}")
-                if c2.button("Kaydet", key=f"ab{aid if aid else i}"):
-                    run_update("UPDATE ariza_bildirimleri SET durum=%s WHERE id=%s", (na, aid))
-                    st.success("Ok"); time.sleep(0.5); st.rerun()
-    else: st.success("Arıza yok.")
+    # --- GÖREVLER ---
+    with t2:
+        if not df_gorev.empty:
+            for i, r in df_gorev.iterrows():
+                gid = r.get('id')
+                gad = r.get('gorev_adi','G')
+                gk = r.get('atanan_kisi','-')
+                gd = r.get('durum','')
+                
+                g_aciklama = r.get('aciklama', r.get('gorev_aciklamasi', r.get('detay', '')))
+                
+                with st.expander(f"📌 {gad} ({gk})"):
+                    if g_aciklama:
+                        st.info(f"📄 **Açıklama:** {g_aciklama}")
+                    
+                    c1, c2 = st.columns([2,1])
+                    c1.write(f"**Mevcut Durum:** {gd}")
+                    
+                    nd = c2.selectbox("Yeni Durum:", ["Beklemede", "Devam Ediyor", "Tamamlandı"], key=f"g{gid if gid else i}")
+                    
+                    if c2.button("Kaydet", key=f"gb{gid if gid else i}"):
+                        run_update("UPDATE gorevler SET durum=%s WHERE id=%s", (nd, gid))
+                        st.success("Güncellendi!")
+                        time.sleep(0.5)
+                        st.rerun()
+        else: st.success("Görev yok.")
 
-with t4:
-    if not df_izin.empty: st.dataframe(df_izin, use_container_width=True)
-    else: st.info("İzin yok.")
-with t5:
-    if not df_toplanti.empty: st.dataframe(df_toplanti, use_container_width=True)
-    else: st.info("Toplantı yok.")
-with t6:
-    if not df_duyuru.empty:
-        for i, r in df_duyuru.iterrows():
-            with st.expander(f"📢 {r.get('baslik','Duyuru')}"): st.write(r.get('icerik',''))
-    else: st.info("Duyuru yok.")
+    # --- ARIZALAR ---
+    with t3:
+        if not df_ariza.empty:
+            for i, r in df_ariza.iterrows():
+                aid = r.get('id'); ab = r.get('ariza_baslik','A'); ak = r.get('gonderen_kullanici_adi','-'); ad = r.get('durum','')
+                with st.expander(f"⚠️ #{aid} {ab} ({ak})"):
+                    c1, c2 = st.columns([2,1])
+                    c1.info(f"Durum: {ad}")
+                    if r.get('aciklama'): c1.write(f"**Detay:** {r['aciklama']}")
+                    na = c2.selectbox("İşlem:", ["Beklemede", "İşlemde", "Parça Bekleniyor", "Cozuldu"], key=f"a{aid if aid else i}")
+                    if c2.button("Kaydet", key=f"ab{aid if aid else i}"):
+                        run_update("UPDATE ariza_bildirimleri SET durum=%s WHERE id=%s", (na, aid))
+                        st.success("Ok"); time.sleep(0.5); st.rerun()
+        else: st.success("Arıza yok.")
+
+    # --- İZİNLER ---
+    with t4:
+        if not df_izin.empty: st.dataframe(df_izin, use_container_width=True)
+        else: st.info("İzin yok.")
