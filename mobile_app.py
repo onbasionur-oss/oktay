@@ -6,114 +6,97 @@ from datetime import datetime, timedelta
 import pytz
 
 # ---------------------------------------------------------
-# 1. AYARLAR & SAYFA YAPILANDIRMASI
+# 1. AYARLAR (Merkez İkonlu 🏢)
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Merkez Mobil Takip",
-    page_icon="📱",
+    page_title="Merkez İş Takip",
+    page_icon="🏢",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
 # ---------------------------------------------------------
-# 2. ULTRA-MODERN MOBİL CSS
+# 2. CSS: SABİT BAR + GİZLEME + GÖRÜNÜM
 # ---------------------------------------------------------
 st.markdown("""
     <style>
-    /* GENEL APP STİLİ */
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
-    
-    .stApp { 
-        background-color: #0f1116 !important; 
-        font-family: 'Roboto', sans-serif;
+    /* --- 1. DARK MODE ZORLAMA --- */
+    .stApp { background-color: #0E1117 !important; color: #FAFAFA !important; }
+    .streamlit-expanderHeader { background-color: #262730 !important; color: #FAFAFA !important; }
+    div[data-testid="stExpander"] { border: 1px solid #41444C !important; background-color: #161920 !important; }
+    [data-testid="stDataFrame"] { background-color: #262730 !important; }
+    div[data-baseweb="select"] > div { background-color: #262730 !important; color: white !important; }
+
+    /* --- 2. GİZLEME KODLARI --- */
+    footer, #MainMenu .footer, .stFooter { display: none !important; }
+    .stAppDeployButton { display: none !important; }
+    [data-testid="stStatusWidget"] { display: none !important; }
+    div[class*="viewerBadge"] { display: none !important; }
+
+    /* --- 3. STREAMLIT MENÜSÜ (Görünür Kalsın) --- */
+    header, [data-testid="stHeader"] {
+        background-color: transparent !important;
+        visibility: visible !important;
+        z-index: 9999999 !important;
     }
-    
-    /* GEREKSİZLERİ GİZLE */
-    header, footer, .stAppDeployButton, [data-testid="stStatusWidget"] { display: none !important; }
-    
-    /* ÜST SABİT BAR (HEADER) */
-    .mobile-header {
-        position: fixed; top: 0; left: 0; width: 100%;
-        background: rgba(15, 17, 22, 0.95);
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid #333;
-        z-index: 9999;
-        padding: 10px 20px;
-        display: flex; justify-content: space-between; align-items: center;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-    
-    .header-title {
-        font-size: 1.2rem; font-weight: 700;
-        background: linear-gradient(90deg, #FF4B4B, #FF914D);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    [data-testid="stToolbar"] {
+        display: flex !important;
+        visibility: visible !important;
+        right: 1rem !important;
+        top: 0.5rem !important;
+        color: white !important;
     }
 
-    /* İÇERİK BOŞLUĞU (Header altı) */
-    .block-container { padding-top: 5rem !important; padding-bottom: 3rem !important; }
-
-    /* KPI KARTLARI (İstatistikler) */
-    div[data-testid="metric-container"] {
-        background: #1e212b;
-        border: 1px solid #333;
-        border-radius: 12px;
-        padding: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        transition: transform 0.2s;
+    /* --- 4. İÇERİK BOŞLUĞU --- */
+    .block-container {
+        padding-top: 5rem !important; 
+        padding-bottom: 1rem !important;
     }
-    div[data-testid="metric-container"]:active { transform: scale(0.98); }
-    label[data-testid="stMetricLabel"] { color: #aaa !important; font-size: 0.8rem !important; }
-    div[data-testid="stMetricValue"] { color: #fff !important; font-size: 1.5rem !important; }
 
-    /* MOBİL KART TASARIMI (Tablolar yerine) */
-    .data-card {
-        background: #1A1D24;
-        border-left: 4px solid #FF4B4B;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 12px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        position: relative;
+    /* --- 5. ÖZEL TASARIM BAR (SABİT DUVAR) --- */
+    .fixed-header-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        background-color: #0E1117;
+        border-bottom: 2px solid #FF4B4B;
+        z-index: 999990; 
+        display: flex;
+        align-items: center;
+        padding-left: 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    .design-text {
+        font-family: 'Brush Script MT', 'Comic Sans MS', cursive;
+        font-size: 26px;
+        font-weight: bold;
+        background: linear-gradient(to right, #FF4B4B, #FF914D, #FF4B4B);
+        background-size: 200% auto; 
+        -webkit-background-clip: text; 
+        -webkit-text-fill-color: transparent;
+        white-space: nowrap; 
+        animation: gentle-pulse-glow 3s ease-in-out infinite;
     }
     
-    .data-card.green { border-left-color: #00D26A; } /* Çalışıyor / Tamamlandı */
-    .data-card.yellow { border-left-color: #F2C94C; } /* Beklemede */
-    .data-card.blue { border-left-color: #2D9CDB; } /* İşlemde */
+    @keyframes gentle-pulse-glow {
+        0% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
+        50% { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 90, 90, 0.8), 0 0 30px rgba(255, 145, 77, 0.6); opacity: 1; }
+        100% { transform: scale(1); text-shadow: 0 0 2px rgba(255, 75, 75, 0.3); opacity: 0.9; }
+    }
     
-    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-    .card-title { font-weight: bold; color: white; font-size: 1rem; }
-    .card-sub { font-size: 0.8rem; color: #888; }
-    .card-badge { 
-        padding: 3px 8px; border-radius: 12px; 
-        font-size: 0.7rem; font-weight: bold; 
-        background: rgba(255,255,255,0.1); color: #fff;
-    }
-
-    /* TAB TASARIMI */
-    .stTabs [data-baseweb="tab-list"] { gap: 5px; overflow-x: auto; white-space: nowrap; }
-    .stTabs [data-baseweb="tab"] {
-        height: 40px; border-radius: 20px; background-color: #262730; border: none; color: white; padding: 0 15px;
-    }
-    .stTabs [aria-selected="true"] { background-color: #FF4B4B !important; color: white !important; }
-
-    /* EXPANDER (AÇILIR KUTU) MODİFİYESİ */
-    .streamlit-expanderHeader { background-color: #262730 !important; border-radius: 8px !important; }
-    div[data-testid="stExpander"] { border: none !important; background-color: transparent !important; }
-
-    /* İMZA */
-    .designer-credit {
-        text-align: center; font-family: 'Brush Script MT', cursive; color: #555; margin-top: 30px; font-size: 1rem; opacity: 0.6;
-    }
+    .stButton button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #FF4B4B; color: white; border: none; }
     </style>
     
-    <div class="mobile-header">
-        <div class="header-title">🏢 Merkez İş Takip</div>
-        <div style="font-size:0.8rem; color:#aaa;">Oktay Design</div>
+    <div class="fixed-header-container">
+        <div class="design-text">Design by Oktay</div>
     </div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 3. VERİTABANI BAĞLANTISI
+# 3. BAĞLANTI (ANLIK)
 # ---------------------------------------------------------
 @st.cache_resource(ttl=0)
 def get_connection():
@@ -128,7 +111,7 @@ def get_connection():
             cursorclass=pymysql.cursors.DictCursor,
             autocommit=True 
         )
-    except Exception:
+    except Exception as e:
         return None
 
 def run_query(query, params=None):
@@ -154,176 +137,166 @@ def run_update(query, params=None):
         return False
 
 # ---------------------------------------------------------
-# 4. YARDIMCI HTML KART FONKSİYONU
+# 4. İÇERİK
 # ---------------------------------------------------------
-def render_mobile_card(title, subtitle, badge_text, color_class="blue", extra_info=None):
-    html = f"""
-    <div class="data-card {color_class}">
-        <div class="card-header">
-            <span class="card-title">{title}</span>
-            <span class="card-badge">{badge_text}</span>
-        </div>
-        <div class="card-sub">{subtitle}</div>
-    """
-    if extra_info:
-        html += f"<div style='margin-top:5px; font-size:0.85rem; color:#ccc;'>{extra_info}</div>"
-    html += "</div>"
-    st.markdown(html, unsafe_allow_html=True)
+st.title("🏢 Merkez Genel Durum Raporu 📢")
 
-# ---------------------------------------------------------
-# 5. VERİ ÇEKME VE HAZIRLIK
-# ---------------------------------------------------------
-# Zaman
-tr_timezone = pytz.timezone('Europe/Istanbul') # Veya 'Europe/Copenhagen'
-simdi = datetime.now(tr_timezone)
-saat_str = simdi.strftime('%H:%M')
-tarih_str = simdi.strftime('%d %B %Y')
+dk_saat = datetime.now(pytz.timezone('Europe/Copenhagen')).strftime('%d-%m-%Y %H:%M:%S')
 
-# Veriler
-raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 200")
+col1, col2, col3 = st.columns([2, 1, 1])
+with col1:
+    st.caption(f"📅 Rapor Saati (DK): {dk_saat}")
+with col2:
+    oto_yenile = st.checkbox("🔄 Otomatik Yenile ", value=False)
+with col3:
+    if st.button("🔄 Yenile", type="primary"):
+        st.cache_data.clear()
+        st.rerun()
+
+if oto_yenile:
+    time.sleep(30)
+    st.rerun()
+
+# --- VERİ ÇEKME ---
+raw_personel = run_query("SELECT * FROM zaman_kayitlari ORDER BY id DESC LIMIT 500")
 df_tum = pd.DataFrame(raw_personel)
 df_aktif = pd.DataFrame()
 
 if not df_tum.empty:
     c_in = next((c for c in ['check_in', 'giris'] if c in df_tum.columns), None)
     c_out = next((c for c in ['check_out', 'cikis'] if c in df_tum.columns), None)
-    if c_in: df_tum[c_in] = pd.to_datetime(df_tum[c_in], errors='coerce') # Saat dilimi ayarını buraya ekleyebilirsiniz
+    if c_in: df_tum[c_in] = pd.to_datetime(df_tum[c_in], errors='coerce') + timedelta(hours=1)
     if c_out:
         temp = pd.to_datetime(df_tum[c_out], errors='coerce')
-        df_tum[c_out] = temp
+        df_tum[c_out] = temp + timedelta(hours=1)
         df_aktif = df_tum[temp.isna()].copy()
     else:
         df_aktif = df_tum.copy()
 
-df_gorev = pd.DataFrame(run_query("SELECT * FROM gorevler WHERE durum NOT IN ('Tamamlandı', 'Bitti')"))
+df_gorev = pd.DataFrame(run_query("SELECT * FROM gorevler WHERE durum NOT IN ('Tamamlandı', 'Tamamlandi', 'Bitti')"))
 df_ariza = pd.DataFrame(run_query("SELECT * FROM ariza_bildirimleri WHERE durum NOT IN ('Cozuldu', 'Çözüldü', 'İptal') ORDER BY id DESC"))
+if not df_ariza.empty:
+    t = next((c for c in ['bildirim_tarihi', 'tarih'] if c in df_ariza.columns), None)
+    if t: df_ariza[t] = pd.to_datetime(df_ariza[t], errors='coerce')
+
 df_izin = pd.DataFrame(run_query("SELECT * FROM tatil_talepleri WHERE onay_durumu = 'Beklemede'"))
+df_toplanti = pd.DataFrame(run_query("SELECT * FROM rezervasyonlar WHERE baslangic_zamani >= CURDATE()"))
 df_duyuru = pd.DataFrame(run_query("SELECT * FROM duyurular ORDER BY id DESC LIMIT 5"))
 
-# ---------------------------------------------------------
-# 6. ARAYÜZ (UI)
-# ---------------------------------------------------------
+# KPI
+k1, k2, k3, k4 = st.columns(4)
+k1.metric("👥 Aktif Personel", len(df_aktif))
+k2.metric("📋 Açık Görev", len(df_gorev))
+k3.metric("🚨 Arızalar", len(df_ariza), delta_color="inverse")
+k4.metric("✈️ İzinler", len(df_izin))
 
-# --- KPI ALANI (MOBİL UYUMLU) ---
-c1, c2 = st.columns(2)
-with c1:
-    st.metric("👥 Aktif", len(df_aktif))
-    st.metric("🚨 Arıza", len(df_ariza))
-with c2:
-    st.metric("📋 Görev", len(df_gorev))
-    st.metric("✈️ İzin", len(df_izin))
+st.markdown("---")
 
-# Otomatik Yenileme ve Saat
-st.caption(f"🕒 Son Güncelleme: {saat_str} | {tarih_str}")
-if st.button("🔄 Verileri Yenile", use_container_width=True, type="primary"):
-    st.cache_data.clear()
-    st.rerun()
+# SEKMELER
+t1, t2, t3, t4, t5, t6 = st.tabs(["👷‍♂️ Personel", "📝 Görevler", "🛠️ Arızalar", "✈️ İzinler", "📅 Toplantı", "📢 Duyurular"])
 
-# --- ANA MENÜ (SEKMELER) ---
-tabs = st.tabs(["👥 Ekip", "📝 İşler", "🛠️ Arıza", "📅 Diğer"])
-
-# --- TAB 1: PERSONEL ---
-with tabs[0]:
-    st.markdown("### 🟢 Şu An Çalışanlar")
-    if not df_aktif.empty:
-        for _, row in df_aktif.iterrows():
-            ad = row.get('kullanici_adi', row.get('ad_soyad', 'Personel'))
-            giris_zamani = row.get('check_in', row.get('giris'))
-            giris_str = giris_zamani.strftime('%H:%M') if pd.notnull(giris_zamani) else "--:--"
-            
-            render_mobile_card(
-                title=ad, 
-                subtitle=f"Giriş Saati: {giris_str}", 
-                badge_text="OFİSTE", 
-                color_class="green"
-            )
-    else:
-        st.info("Kimse ofiste görünmüyor.")
-
-    with st.expander("🕰️ Son Hareketler (Log)"):
+with t1:
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("🟢 Çalisiyor")
+        if not df_aktif.empty:
+            ad = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_aktif.columns), df_aktif.columns[0])
+            gr = next((c for c in ['check_in', 'giris'] if c in df_aktif.columns), None)
+            cols = [ad] 
+            if gr: cols.append(gr)
+            st.dataframe(df_aktif[cols], hide_index=True, use_container_width=True)
+        else: st.info("Kimse yok.")
+    
+    with c2:
+        st.subheader("📋 Log (Son 1 Hafta)")
         if not df_tum.empty:
-            # Sadece son 10 hareketi göster (Mobil hız için)
-            for _, row in df_tum.head(10).iterrows():
-                ad = row.get('kullanici_adi', row.get('ad_soyad'))
-                g_saat = row.get('check_in', row.get('giris'))
-                c_saat = row.get('check_out', row.get('cikis'))
-                
-                g_fmt = g_saat.strftime('%d.%m %H:%M') if pd.notnull(g_saat) else "-"
-                c_fmt = c_saat.strftime('%H:%M') if pd.notnull(c_saat) else "..."
-                
-                # Çıkış yapmışsa gri, yapmamışsa yeşil
-                renk = "green" if pd.isnull(c_saat) else "yellow"
-                durum = "İçeride" if pd.isnull(c_saat) else "Çıktı"
-                
-                render_mobile_card(ad, f"Giriş: {g_fmt} | Çıkış: {c_fmt}", durum, renk)
+            # --- FİLTRELEME İŞLEMİ (SON 1 HAFTA) ---
+            # Kullanılan giriş kolonunu bul
+            log_c_in = next((c for c in ['check_in', 'giris'] if c in df_tum.columns), None)
+            
+            df_log_goster = pd.DataFrame()
+            
+            if log_c_in:
+                # 7 gün öncesini hesapla
+                bir_hafta_once = datetime.now() - timedelta(days=7)
+                # Filtreyi uygula
+                df_log_goster = df_tum[df_tum[log_c_in] > bir_hafta_once].copy()
+            else:
+                # Kolon yoksa hepsini göster (hata vermesin diye)
+                df_log_goster = df_tum.copy()
 
-# --- TAB 2: GÖREVLER ---
-with tabs[1]:
-    st.markdown("### 📋 Açık Görevler")
+            # Kolon isimlerini ayarla
+            ad = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_log_goster.columns), None)
+            gr = next((c for c in ['check_in', 'giris'] if c in df_log_goster.columns), None)
+            ck = next((c for c in ['check_out', 'cikis'] if c in df_log_goster.columns), None)
+            
+            cols = []
+            if ad: cols.append(ad)
+            if gr: cols.append(gr)
+            if ck: cols.append(ck)
+            
+            if not df_log_goster.empty:
+                st.dataframe(df_log_goster[cols], hide_index=True, use_container_width=True, 
+                             column_config={
+                                 gr: st.column_config.DatetimeColumn("Giriş", format="DD.MM HH:mm"), 
+                                 ck: st.column_config.DatetimeColumn("Çıkış", format="DD.MM HH:mm")
+                             })
+            else:
+                st.info("Son 1 haftaya ait kayıt bulunamadı.")
+        else:
+             st.info("Veri yok.")
+
+# --- GÖREVLER (AÇIKLAMA EKLENDİ) ---
+with t2:
     if not df_gorev.empty:
         for i, r in df_gorev.iterrows():
             gid = r.get('id')
-            gad = r.get('gorev_adi', 'Görev')
-            gk = r.get('atanan_kisi', '-')
-            gd = r.get('durum', 'Beklemede')
-            g_aciklama = r.get('aciklama', r.get('gorev_aciklamasi', ''))
-
-            # Duruma göre renk
-            renk = "blue"
-            if "Devam" in gd: renk = "yellow"
+            gad = r.get('gorev_adi','G')
+            gk = r.get('atanan_kisi','-')
+            gd = r.get('durum','')
             
-            # Kart Görünümü (HTML)
-            render_mobile_card(gad, f"Atanan: {gk}", gd, renk, extra_info=g_aciklama)
+            # Açıklamayı bul (Farklı isimler olabilir diye kontrol ediyoruz)
+            g_aciklama = r.get('aciklama', r.get('gorev_aciklamasi', r.get('detay', '')))
             
-            # Aksiyon Butonları (Expander içinde gizli)
-            with st.expander(f"✏️ {gad} Düzenle"):
-                col_btn1, col_btn2 = st.columns(2)
-                with col_btn1:
-                    if st.button("Devam Ediyor", key=f"devam_{gid}"):
-                        run_update("UPDATE gorevler SET durum='Devam Ediyor' WHERE id=%s", (gid,))
-                        st.success("Güncellendi")
-                        time.sleep(0.5); st.rerun()
-                with col_btn2:
-                    if st.button("✅ Tamamla", key=f"bitir_{gid}", type="primary"):
-                        run_update("UPDATE gorevler SET durum='Tamamlandı' WHERE id=%s", (gid,))
-                        st.success("Bitti!"); time.sleep(0.5); st.rerun()
-    else:
-        st.success("Tüm görevler tamamlandı! 🎉")
+            with st.expander(f"📌 {gad} ({gk})"):
+                # EĞER AÇIKLAMA VARSA GÖSTER
+                if g_aciklama:
+                    st.info(f"📄 **Açıklama:** {g_aciklama}")
+                
+                c1, c2 = st.columns([2,1])
+                c1.write(f"**Mevcut Durum:** {gd}")
+                
+                nd = c2.selectbox("Yeni Durum:", ["Beklemede", "Devam Ediyor", "Tamamlandı"], key=f"g{gid if gid else i}")
+                
+                if c2.button("Kaydet", key=f"gb{gid if gid else i}"):
+                    run_update("UPDATE gorevler SET durum=%s WHERE id=%s", (nd, gid))
+                    st.success("Güncellendi!")
+                    time.sleep(0.5)
+                    st.rerun()
+    else: st.success("Görev yok.")
 
-# --- TAB 3: ARIZALAR ---
-with tabs[2]:
-    st.markdown("### ⚠️ Arıza Bildirimleri")
+with t3:
     if not df_ariza.empty:
         for i, r in df_ariza.iterrows():
-            aid = r.get('id')
-            baslik = r.get('ariza_baslik', 'Arıza')
-            kisi = r.get('gonderen_kullanici_adi', '-')
-            durum = r.get('durum', '')
-            
-            render_mobile_card(f"#{aid} {baslik}", f"Bildiren: {kisi}", durum.upper(), "data-card", extra_info=r.get('aciklama',''))
-            
-            with st.expander("🛠️ Durumu Değiştir"):
-                new_status = st.selectbox("Durum Seç:", ["İşlemde", "Parça Bekleniyor", "Cozuldu"], key=f"ariza_sel_{aid}")
-                if st.button("Kaydet", key=f"ariza_btn_{aid}"):
-                    run_update("UPDATE ariza_bildirimleri SET durum=%s WHERE id=%s", (new_status, aid))
-                    st.success("Kaydedildi"); time.sleep(0.5); st.rerun()
-    else:
-        st.success("Hiç arıza yok! Sistem stabil. ✅")
+            aid = r.get('id'); ab = r.get('ariza_baslik','A'); ak = r.get('gonderen_kullanici_adi','-'); ad = r.get('durum','')
+            with st.expander(f"⚠️ #{aid} {ab} ({ak})"):
+                c1, c2 = st.columns([2,1])
+                c1.info(f"Durum: {ad}")
+                if r.get('aciklama'): c1.write(f"**Detay:** {r['aciklama']}")
+                na = c2.selectbox("İşlem:", ["Beklemede", "İşlemde", "Parça Bekleniyor", "Cozuldu"], key=f"a{aid if aid else i}")
+                if c2.button("Kaydet", key=f"ab{aid if aid else i}"):
+                    run_update("UPDATE ariza_bildirimleri SET durum=%s WHERE id=%s", (na, aid))
+                    st.success("Ok"); time.sleep(0.5); st.rerun()
+    else: st.success("Arıza yok.")
 
-# --- TAB 4: DİĞER (İZİN & DUYURU) ---
-with tabs[3]:
-    st.info("📢 Duyurular")
+with t4:
+    if not df_izin.empty: st.dataframe(df_izin, use_container_width=True)
+    else: st.info("İzin yok.")
+with t5:
+    if not df_toplanti.empty: st.dataframe(df_toplanti, use_container_width=True)
+    else: st.info("Toplantı yok.")
+with t6:
     if not df_duyuru.empty:
         for i, r in df_duyuru.iterrows():
-            st.warning(f"**{r.get('baslik')}**: {r.get('icerik')}")
-    
-    st.markdown("---")
-    st.info("✈️ İzin Talepleri")
-    if not df_izin.empty:
-        for i, r in df_izin.iterrows():
-             render_mobile_card(r.get('ad_soyad'), f"{r.get('baslangic')} - {r.get('bitis')}", r.get('tur', 'Yıllık'), "yellow")
-    else:
-        st.write("Bekleyen izin talebi yok.")
-
-# İmza
-st.markdown("<div class='designer-credit'>Design by Oktay • 2025</div>", unsafe_allow_html=True)
+            with st.expander(f"📢 {r.get('baslik','Duyuru')}"): st.write(r.get('icerik',''))
+    else: st.info("Duyuru yok.")
