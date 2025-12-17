@@ -198,7 +198,7 @@ t1, t2, t3, t4, t5, t6 = st.tabs(["👷‍♂️ Personel", "📝 Görevler", "�
 with t1:
     c1, c2 = st.columns(2)
     with c1:
-        st.subheader("🟢 Çalisiyor")
+        st.subheader("🟢 Çalisan")
         if not df_aktif.empty:
             ad = next((c for c in ['kullanici_adi', 'ad_soyad'] if c in df_aktif.columns), df_aktif.columns[0])
             gr = next((c for c in ['check_in', 'giris'] if c in df_aktif.columns), None)
